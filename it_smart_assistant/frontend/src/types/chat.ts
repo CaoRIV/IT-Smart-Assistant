@@ -4,13 +4,25 @@
 
 export type MessageRole = "user" | "assistant" | "system";
 
+export interface ChatAttachment {
+  id: string;
+  file_name: string;
+  media_type: string;
+  kind: "document" | "image";
+  size_bytes: number;
+  created_at: string;
+}
+
 export interface ChatMessage {
   id: string;
+  backendMessageId?: string;
   role: MessageRole;
   content: string;
   timestamp: Date;
+  attachments?: ChatAttachment[];
   toolCalls?: ToolCall[];
   isStreaming?: boolean;
+  feedbackHelpful?: boolean | null;
   /** Group ID for related messages (e.g., CrewAI agent chain) */
   groupId?: string;
 }
@@ -40,6 +52,7 @@ export type WSEventType =
   | "complete"
   | "error"
   | "conversation_created"
+  | "assistant_message_saved"
   | "message_saved"
   // CrewAI-specific events
   | "crew_start"
@@ -63,7 +76,7 @@ export interface WSEvent {
 export interface TextDeltaEvent {
   type: "text_delta";
   data: {
-    delta: string;
+    content: string;
   };
 }
 
@@ -72,14 +85,15 @@ export interface ToolCallEvent {
   data: {
     tool_name: string;
     args: Record<string, unknown>;
+    tool_call_id: string;
   };
 }
 
 export interface ToolResultEvent {
   type: "tool_result";
   data: {
-    tool_name: string;
-    result: unknown;
+    tool_call_id: string;
+    content: unknown;
   };
 }
 

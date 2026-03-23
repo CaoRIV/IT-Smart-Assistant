@@ -1,0 +1,52 @@
+{
+  "title": "Don xin mien giam hoc phi",
+  "category": "Hoc phi",
+  "description": "Bieu mau de de nghi xem xet mien giam hoc phi theo doi tuong uu tien.",
+  "source_url": null,
+  "keywords": [
+    "mien giam hoc phi",
+    "hoc phi",
+    "ho tro hoc phi",
+    "Don xin mien giam hoc phi"
+  ],
+  "fields": [
+    {
+      "name": "full_name",
+      "label": "Ho va ten",
+      "type": "text",
+      "required": true,
+      "placeholder": "Nhap ho va ten"
+    },
+    {
+      "name": "student_id",
+      "label": "Ma sinh vien",
+      "type": "text",
+      "required": true,
+      "placeholder": "Nhap ma sinh vien"
+    },
+    {
+      "name": "policy_group",
+      "label": "Doi tuong chinh sach",
+      "type": "text",
+      "required": true,
+      "placeholder": "Nhap doi tuong"
+    },
+    {
+      "name": "support_level",
+      "label": "Muc de nghi",
+      "type": "text",
+      "required": true,
+      "placeholder": "Vi du: mien 100%, giam 50%"
+    },
+    {
+      "name": "support_reason",
+      "label": "Can cu de nghi",
+      "type": "text",
+      "required": true,
+      "placeholder": "Nhap can cu de nghi"
+    }
+  ],
+  "id": "hoc-phi-don-xin-mien-giam-hoc-phi",
+  "created_at": "2026-03-17T15:05:55.443546+00:00",
+  "updated_at": "2026-03-17T15:05:55.443546+00:00"
+}

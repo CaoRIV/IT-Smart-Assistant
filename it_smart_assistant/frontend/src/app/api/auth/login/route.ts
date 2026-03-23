@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { backendFetch, BackendApiError } from "@/lib/server-api";
-import type { LoginResponse } from "@/types";
+import type { LoginResponse, User } from "@/types";
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,10 +19,16 @@ export async function POST(request: NextRequest) {
       body: formData.toString(),
     });
 
+    const user = await backendFetch<User>("/api/v1/auth/me", {
+      headers: {
+        Authorization: `Bearer ${data.access_token}`,
+      },
+    });
+
     // Set HTTP-only cookies for tokens
     const response = NextResponse.json({
-      user: data.user,
-      message: "Login successful",
+      user,
+      message: "Đăng nhập thành công",
     });
 
     // Set access token cookie (short-lived)
@@ -47,11 +53,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof BackendApiError) {
       const detail =
-        (error.data as { detail?: string })?.detail || "Login failed";
+        (error.data as { detail?: string })?.detail || "Đăng nhập thất bại";
       return NextResponse.json({ detail }, { status: error.status });
     }
     return NextResponse.json(
-      { detail: "Internal server error" },
+      { detail: "Lỗi máy chủ nội bộ" },
       { status: 500 }
     );
   }

@@ -4,19 +4,28 @@ A simple ReAct (Reasoning + Acting) agent built with LangGraph.
 Uses a graph-based architecture with conditional edges for tool execution.
 """
 
+import json
 import logging
 from typing import Annotated, Any, Literal, TypedDict
+from uuid import uuid4
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 
+from app.agents.intent_router import IntentRoute, route_human_message
 from app.agents.prompts import DEFAULT_SYSTEM_PROMPT
+from app.agents.tools.course_catalog import search_course_catalog
+from app.agents.tools.form_generator import generate_form
+from app.agents.tools.procedure_workflow import build_procedure_workflow
+from app.agents.tools.student_knowledge import search_student_knowledge
 from app.agents.tools import get_current_datetime
 from app.core.config import settings
+from app.schemas.chat_attachment import PromptAttachment
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +39,17 @@ class AgentContext(TypedDict, total=False):
     user_id: str | None
     user_name: str | None
     metadata: dict[str, Any]
+
+
+class AgentAttachment(TypedDict):
+    """Attachment payload injected into the current user turn."""
+
+    id: str
+    file_name: str
+    media_type: str
+    kind: str
+    extracted_text: str | None
+    data_url: str | None
 
 
 class AgentState(TypedDict):
@@ -53,10 +73,21 @@ def current_datetime() -> str:
 
 
 # List of all available tools
-ALL_TOOLS = [current_datetime]
+ALL_TOOLS = [current_datetime, search_student_knowledge, search_course_catalog, build_procedure_workflow, generate_form]
 
 # Create a dictionary for quick tool lookup by name
 TOOLS_BY_NAME = {t.name: t for t in ALL_TOOLS}
+
+
+def _serialize_tool_result(result: Any) -> str:
+    """Serialize tool output as JSON when possible so the frontend can parse it reliably."""
+    if isinstance(result, str):
+        return result
+
+    try:
+        return json.dumps(result, ensure_ascii=False, default=str)
+    except TypeError:
+        return str(result)
 
 
 class LangGraphAssistant:
@@ -89,24 +120,206 @@ class LangGraphAssistant:
 
     def _create_model(self):
         """Create the LLM model with tools bound."""
-        model = ChatOpenAI(
-            model=self.model_name,
-            temperature=self.temperature,
-            api_key=settings.OPENAI_API_KEY,
-            streaming=True,
-        )
+        provider = settings.LLM_PROVIDER.lower()
+
+        if provider == "google":
+            if not settings.GOOGLE_API_KEY:
+                raise ValueError("GOOGLE_API_KEY is required when LLM_PROVIDER=google")
+
+            model = ChatGoogleGenerativeAI(
+                model=self.model_name,
+                temperature=self.temperature,
+                google_api_key=settings.GOOGLE_API_KEY,
+            )
+        else:
+            if not settings.OPENAI_API_KEY:
+                raise ValueError("OPENAI_API_KEY is required when LLM_PROVIDER=openai")
+
+            model = ChatOpenAI(
+                model=self.model_name,
+                temperature=self.temperature,
+                api_key=settings.OPENAI_API_KEY,
+                streaming=True,
+            )
 
         return model.bind_tools(ALL_TOOLS)
+
+    @staticmethod
+    def _find_last_human_message(messages: list[BaseMessage]) -> HumanMessage | None:
+        for message in reversed(messages):
+            if isinstance(message, HumanMessage):
+                return message
+        return None
+
+    @staticmethod
+    def _parse_tool_payload(content: Any) -> dict[str, Any] | None:
+        if isinstance(content, dict):
+            return content
+        if not isinstance(content, str):
+            return None
+        try:
+            payload = json.loads(content)
+        except Exception:
+            return None
+        return payload if isinstance(payload, dict) else None
+
+    @staticmethod
+    def _tool_names_since_last_human(messages: list[BaseMessage]) -> set[str]:
+        names: set[str] = set()
+        for message in reversed(messages):
+            if isinstance(message, HumanMessage):
+                break
+            if isinstance(message, ToolMessage) and message.name:
+                names.add(message.name)
+        return names
+
+    def _fallback_after_tool(self, state: AgentState) -> IntentRoute | None:
+        if not state["messages"] or not isinstance(state["messages"][-1], ToolMessage):
+            return None
+
+        last_tool_message = state["messages"][-1]
+        payload = self._parse_tool_payload(last_tool_message.content)
+        last_human = self._find_last_human_message(state["messages"])
+        seen_tool_names = self._tool_names_since_last_human(state["messages"])
+        if payload is None or last_human is None:
+            return None
+
+        last_human_text = self._build_plain_human_text(last_human)
+        if not last_human_text:
+            return None
+
+        if (
+            last_tool_message.name == "search_course_catalog"
+            and payload.get("result_count") == 0
+            and "search_student_knowledge" not in seen_tool_names
+        ):
+            return IntentRoute(
+                intent="knowledge_qa",
+                reason="fallback from empty course catalog retrieval",
+                force_tool_calls=[
+                    {
+                        "id": f"router_fallback_{uuid4().hex}",
+                        "name": "search_student_knowledge",
+                        "args": {"query": last_human_text, "top_k": 4},
+                        "type": "tool_call",
+                    }
+                ],
+                system_hint="Khong tim thay du lieu mon hoc co cau truc. Thu tim trong knowledge chung de tra loi bo sung.",
+            )
+
+        if (
+            last_tool_message.name == "build_procedure_workflow"
+            and payload.get("matched") is False
+            and "search_student_knowledge" not in seen_tool_names
+        ):
+            return IntentRoute(
+                intent="knowledge_qa",
+                reason="fallback from unmatched procedure workflow",
+                force_tool_calls=[
+                    {
+                        "id": f"router_fallback_{uuid4().hex}",
+                        "name": "search_student_knowledge",
+                        "args": {"query": last_human_text, "top_k": 4},
+                        "type": "tool_call",
+                    }
+                ],
+                system_hint="Workflow khong khop. Thu hoi dap bang knowledge base de tranh tra loi bi cut.",
+            )
+
+        if (
+            last_tool_message.name == "search_student_knowledge"
+            and payload.get("result_count") == 0
+            and "build_procedure_workflow" not in seen_tool_names
+        ):
+            route = route_human_message(last_human)
+            if route.intent == "tuition_lookup":
+                return IntentRoute(
+                    intent="knowledge_qa",
+                    reason="fallback from empty tuition retrieval",
+                    force_tool_calls=[
+                        {
+                            "id": f"router_fallback_{uuid4().hex}",
+                            "name": "build_procedure_workflow",
+                            "args": {"request": last_human_text},
+                            "type": "tool_call",
+                        }
+                    ],
+                    system_hint="Knowledge retrieval rong. Thu kiem tra xem day co phai cau hoi thu tuc hay khong.",
+                )
+
+        return None
+
+    @staticmethod
+    def _build_plain_human_text(message: HumanMessage) -> str:
+        content = message.content
+        if isinstance(content, str):
+            return content
+
+        parts: list[str] = []
+        if isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict) and block.get("type") == "text":
+                    text = block.get("text")
+                    if isinstance(text, str):
+                        parts.append(text)
+                elif isinstance(block, str):
+                    parts.append(block)
+        return "\n".join(parts).strip()
+
+    def route_user_input(
+        self,
+        user_input: str,
+        attachments: list[PromptAttachment] | None = None,
+    ) -> IntentRoute:
+        return route_human_message(self._build_user_message(user_input, attachments))
 
     def _agent_node(self, state: AgentState) -> dict[str, list[BaseMessage]]:
         """Agent node that processes messages and decides whether to call tools.
 
         This is the main reasoning node in the ReAct pattern.
         """
+        fallback_route = self._fallback_after_tool(state)
+        if fallback_route and fallback_route.force_tool_calls:
+            logger.info(
+                "Intent router fallback forced tool call(s): %s (%s)",
+                fallback_route.intent,
+                fallback_route.reason,
+            )
+            return {
+                "messages": [
+                    AIMessage(
+                        content="",
+                        tool_calls=fallback_route.force_tool_calls,
+                    )
+                ]
+            }
+
+        if state["messages"] and isinstance(state["messages"][-1], HumanMessage):
+            route = route_human_message(state["messages"][-1])
+            if route.force_tool_calls:
+                logger.info("Intent router forced tool call(s): %s (%s)", route.intent, route.reason)
+                return {
+                    "messages": [
+                        AIMessage(
+                            content="",
+                            tool_calls=route.force_tool_calls,
+                        )
+                    ]
+                }
+
         model = self._create_model()
 
         # Prepend system message to the conversation
-        messages = [SystemMessage(content=self.system_prompt), *state["messages"]]
+        system_prompt = self.system_prompt
+        route_hint: IntentRoute | None = None
+        if state["messages"] and isinstance(state["messages"][-1], HumanMessage):
+            route_hint = route_human_message(state["messages"][-1])
+        elif fallback_route:
+            route_hint = fallback_route
+        if route_hint and route_hint.system_hint:
+            system_prompt = f"{self.system_prompt}\n\nRouter hint:\n{route_hint.system_hint}"
+
+        messages = [SystemMessage(content=system_prompt), *state["messages"]]
 
         response = model.invoke(messages)
 
@@ -140,7 +353,7 @@ class LangGraphAssistant:
                         result = tool_fn.invoke(tool_args)
                         tool_results.append(
                             ToolMessage(
-                                content=str(result),
+                                content=_serialize_tool_result(result),
                                 tool_call_id=tool_id,
                                 name=tool_name,
                             )
@@ -229,12 +442,67 @@ class LangGraphAssistant:
 
         return messages
 
+    @staticmethod
+    def _build_user_message(
+        user_input: str,
+        attachments: list[PromptAttachment] | None = None,
+    ) -> HumanMessage:
+        """Build the current user message, enriching it with attachment context."""
+        if not attachments:
+            return HumanMessage(content=user_input)
+
+        document_sections: list[str] = []
+        image_attachments: list[PromptAttachment] = []
+
+        for attachment in attachments:
+            if attachment.kind == "image" and attachment.data_url:
+                image_attachments.append(attachment)
+                continue
+
+            if attachment.extracted_text:
+                document_sections.append(
+                    f"Tep dinh kem: {attachment.file_name}\n{attachment.extracted_text}"
+                )
+            else:
+                document_sections.append(
+                    f"Tep dinh kem: {attachment.file_name}\nKhong trich xuat duoc noi dung van ban."
+                )
+
+        if not image_attachments:
+            prompt_parts = [user_input]
+            if document_sections:
+                prompt_parts.append(
+                    "Day la noi dung duoc trich tu tep dinh kem cua nguoi dung:\n\n"
+                    + "\n\n".join(document_sections)
+                )
+            return HumanMessage(content="\n\n".join(prompt_parts).strip())
+
+        text_parts = [user_input]
+        if document_sections:
+            text_parts.append(
+                "Day la noi dung duoc trich tu tep dinh kem cua nguoi dung:\n\n"
+                + "\n\n".join(document_sections)
+            )
+        text_parts.append("Nguoi dung cung gui kem anh de ban phan tich.")
+
+        content_blocks: list[dict[str, Any]] = [{"type": "text", "text": "\n\n".join(text_parts)}]
+        for attachment in image_attachments:
+            content_blocks.append(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": attachment.data_url},
+                }
+            )
+
+        return HumanMessage(content=content_blocks)
+
     async def run(
         self,
         user_input: str,
         history: list[dict[str, str]] | None = None,
         context: AgentContext | None = None,
         thread_id: str = "default",
+        attachments: list[PromptAttachment] | None = None,
     ) -> tuple[str, list[Any], AgentContext]:
         """Run agent and return the output along with tool call events.
 
@@ -248,7 +516,7 @@ class LangGraphAssistant:
             Tuple of (output_text, tool_events, context).
         """
         messages = self._convert_history(history)
-        messages.append(HumanMessage(content=user_input))
+        messages.append(self._build_user_message(user_input, attachments))
 
         agent_context: AgentContext = context if context is not None else {}
 
@@ -288,6 +556,7 @@ class LangGraphAssistant:
         history: list[dict[str, str]] | None = None,
         context: AgentContext | None = None,
         thread_id: str = "default",
+        attachments: list[PromptAttachment] | None = None,
     ):
         """Stream agent execution with message and state update streaming.
 
@@ -303,7 +572,7 @@ class LangGraphAssistant:
             - stream_mode="updates": state updates after each node
         """
         messages = self._convert_history(history)
-        messages.append(HumanMessage(content=user_input))
+        messages.append(self._build_user_message(user_input, attachments))
 
         agent_context: AgentContext = context if context is not None else {}
 

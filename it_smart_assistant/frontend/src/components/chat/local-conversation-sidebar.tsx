@@ -46,7 +46,7 @@ function LocalConversationItem({
 
   const displayTitle =
     conversation.title ||
-    `Chat ${new Date(conversation.createdAt).toLocaleDateString()}`;
+    `Trò chuyện ${new Date(conversation.createdAt).toLocaleDateString("vi-VN")}`;
 
   return (
     <div
@@ -109,7 +109,7 @@ function LocalConversationItem({
                 }}
               >
                 <Pencil className="h-4 w-4" />
-                Rename
+                Đổi tên
               </button>
               <button
                 className="flex w-full items-center gap-2 px-3 py-3 text-sm text-destructive hover:bg-destructive/10 min-h-[44px]"
@@ -120,7 +120,7 @@ function LocalConversationItem({
                 }}
               >
                 <Trash2 className="h-4 w-4" />
-                Delete
+                Xóa
               </button>
             </div>
           </>
@@ -160,7 +160,7 @@ function ConversationList({ onNavigate }: { onNavigate?: () => void }) {
           onClick={handleNewChat}
         >
           <MessageSquarePlus className="h-4 w-4" />
-          New Chat
+          Cuộc trò chuyện mới
         </Button>
       </div>
 
@@ -168,8 +168,8 @@ function ConversationList({ onNavigate }: { onNavigate?: () => void }) {
         {conversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center text-sm text-muted-foreground">
             <MessageSquare className="h-8 w-8 mb-2 opacity-50" />
-            <p>No conversations yet</p>
-            <p className="text-xs mt-1">Start a new chat to begin</p>
+            <p>Chưa có cuộc trò chuyện nào</p>
+            <p className="text-xs mt-1">Hãy bắt đầu một cuộc trò chuyện mới</p>
           </div>
         ) : (
           <div className="space-y-1">
@@ -189,7 +189,7 @@ function ConversationList({ onNavigate }: { onNavigate?: () => void }) {
 
       <div className="border-t px-3 py-2">
         <p className="text-xs text-muted-foreground text-center">
-          Stored in browser
+          Lưu trong trình duyệt
         </p>
       </div>
     </>
@@ -229,7 +229,7 @@ export function LocalConversationSidebar({
           onClick={() => {
             useLocalChatStore.getState().createConversation();
           }}
-          title="New Chat"
+          title="Cuộc trò chuyện mới"
         >
           <MessageSquarePlus className="h-4 w-4" />
         </Button>
@@ -246,7 +246,7 @@ export function LocalConversationSidebar({
         )}
       >
         <div className="flex items-center justify-between border-b px-4 py-3 h-12">
-          <h2 className="font-semibold text-sm">Local Chats</h2>
+          <h2 className="font-semibold text-sm">Trò chuyện cục bộ</h2>
           <Button
             variant="ghost"
             size="sm"
@@ -262,7 +262,7 @@ export function LocalConversationSidebar({
       <Sheet open={isOpen} onOpenChange={close}>
         <SheetContent side="left" className="w-80 p-0">
           <SheetHeader className="h-12 px-4">
-            <SheetTitle>Local Chats</SheetTitle>
+            <SheetTitle>Trò chuyện cục bộ</SheetTitle>
             <SheetClose onClick={close} />
           </SheetHeader>
           <div className="flex flex-col h-[calc(100%-48px)]">
@@ -289,7 +289,7 @@ export function ChatSidebarToggle() {
       ) : (
         <PanelLeft className="h-5 w-5" />
       )}
-      <span className="sr-only">Toggle chat list</span>
+      <span className="sr-only">Mở danh sách trò chuyện</span>
     </Button>
   );
 }

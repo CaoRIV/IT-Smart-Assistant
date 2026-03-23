@@ -1,6 +1,8 @@
 """Project management CLI."""
 # ruff: noqa: E402 - Import at bottom to avoid circular imports
 
+from pathlib import Path
+
 import click
 from tabulate import tabulate
 
@@ -128,6 +130,46 @@ def db_history():
 
     alembic_cfg = Config("alembic.ini")
     command.history(alembic_cfg)
+
+
+# === Knowledge Commands ===
+@cli.group("knowledge")
+def knowledge_cli():
+    """Knowledge ingest and inspection commands."""
+    pass
+
+
+@knowledge_cli.command("ingest")
+@click.option(
+    "--raw-dir",
+    type=click.Path(path_type=Path, file_okay=False),
+    default=None,
+    help="Directory containing raw PDF knowledge files",
+)
+@click.option(
+    "--output-dir",
+    type=click.Path(path_type=Path, file_okay=False),
+    default=None,
+    help="Directory to store processed knowledge artifacts",
+)
+def knowledge_ingest(raw_dir: Path | None, output_dir: Path | None):
+    """Extract PDF files into retrieval-ready JSON documents and chunks."""
+    from app.knowledge import DEFAULT_OUTPUT_DIR, DEFAULT_RAW_DIR, ingest_knowledge_base
+
+    selected_raw_dir = raw_dir or DEFAULT_RAW_DIR
+    selected_output_dir = output_dir or DEFAULT_OUTPUT_DIR
+
+    if not selected_raw_dir.exists():
+        raise click.ClickException(f"Raw knowledge directory not found: {selected_raw_dir}")
+
+    result = ingest_knowledge_base(raw_dir=selected_raw_dir, output_dir=selected_output_dir)
+
+    click.secho("Knowledge ingest completed.", fg="green")
+    click.echo(f"Raw directory: {result.raw_dir}")
+    click.echo(f"Processed directory: {result.output_dir}")
+    click.echo(f"Documents: {result.document_count}")
+    click.echo(f"Chunks: {result.chunk_count}")
+    click.echo(f"Manifest: {result.manifest_path}")
 
 
 # === User Commands ===

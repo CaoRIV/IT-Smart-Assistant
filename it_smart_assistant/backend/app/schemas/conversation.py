@@ -67,6 +67,8 @@ class MessageCreate(MessageBase):
 
     model_name: str | None = Field(default=None, max_length=100, description="AI model used")
     tokens_used: int | None = Field(default=None, ge=0, description="Token count")
+    router_intent: str | None = Field(default=None, max_length=50, description="Router intent")
+    router_reason: str | None = Field(default=None, max_length=255, description="Router reason")
 
 
 class MessageRead(MessageBase, TimestampSchema):
@@ -76,6 +78,8 @@ class MessageRead(MessageBase, TimestampSchema):
     conversation_id: UUID
     model_name: str | None = None
     tokens_used: int | None = None
+    router_intent: str | None = None
+    router_reason: str | None = None
     tool_calls: list[ToolCallRead] = Field(default_factory=list)
 
 
@@ -86,6 +90,8 @@ class MessageReadSimple(MessageBase, TimestampSchema):
     conversation_id: UUID
     model_name: str | None = None
     tokens_used: int | None = None
+    router_intent: str | None = None
+    router_reason: str | None = None
 
 
 # =============================================================================

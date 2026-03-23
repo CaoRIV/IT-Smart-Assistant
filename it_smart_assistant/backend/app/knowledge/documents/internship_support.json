@@ -1,0 +1,9 @@
+{
+  "id": "internship_support",
+  "title": "Thu tuc thuc tap",
+  "category": "Hoc tap va nghe nghiep",
+  "summary": "Sinh vien can dang ky ke hoach thuc tap, co giang vien huong dan va nop cac bieu mau theo quy dinh cua khoa hoac bo mon.",
+  "content": "Khi bat dau hoc phan thuc tap, sinh vien can theo doi thong bao cua khoa de biet mốc thoi gian dang ky don vi thuc tap, nop de cuong hoac ke hoach thuc tap va phan cong giang vien huong dan. Neu don vi thuc tap yeu cau giay gioi thieu, sinh vien lien he khoa hoac phong cong tac sinh vien theo quy trinh noi bo. Trong qua trinh thuc tap, sinh vien can nop bao cao dinh ky, nhat ky thuc tap va bao cao tong ket theo mau duoc ban hanh.",
+  "source_url": "https://student.example.edu/faq/thu-tuc-thuc-tap",
+  "keywords": ["thuc tap", "giay gioi thieu", "giang vien huong dan", "bao cao thuc tap", "khoa"]
+}

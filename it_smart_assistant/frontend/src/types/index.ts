@@ -4,5 +4,8 @@
 
 export * from "./api";
 export * from "./auth";
+export * from "./analytics";
 export * from "./chat";
 export * from "./conversation";
+export * from "./feedback";
+export * from "./knowledge-admin";

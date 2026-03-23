@@ -1,6 +1,21 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function POST() {
+import { backendFetch } from "@/lib/server-api";
+
+export async function POST(request: NextRequest) {
+  const refreshToken = request.cookies.get("refresh_token")?.value;
+
+  if (refreshToken) {
+    try {
+      await backendFetch("/api/v1/auth/logout", {
+        method: "POST",
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+    } catch {
+      // We still clear browser cookies even if backend session cleanup fails.
+    }
+  }
+
   const response = NextResponse.json({ message: "Logged out successfully" });
 
   // Clear auth cookies

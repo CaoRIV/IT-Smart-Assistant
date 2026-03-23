@@ -1,0 +1,9 @@
+{
+  "id": "course_registration",
+  "title": "Dang ky hoc phan",
+  "category": "Hoc vu",
+  "summary": "Sinh vien dang ky hoc phan tren cong thong tin dao tao theo cac dot do nha truong mo. Can kiem tra dieu kien tien quyet, so tin chi toi da va hoc phi tam tinh truoc khi chot.",
+  "content": "Sinh vien dang ky hoc phan tren cong thong tin dao tao trong thoi gian mo dang ky do phong dao tao thong bao. Truoc khi chot dang ky, sinh vien can kiem tra mon tien quyet, mon hoc truoc, so tin chi toi da duoc phep trong hoc ky va lich hoc bi trung. Neu muon dieu chinh mon hoc, sinh vien thuc hien trong dot dieu chinh dang ky hoc phan. Sau khi het han, moi thay doi can lien he phong dao tao de duoc huong dan. Hoc phi tam tinh thuong duoc cap nhat sau khi danh sach hoc phan da chot.",
+  "source_url": "https://student.example.edu/faq/dang-ky-hoc-phan",
+  "keywords": ["dang ky mon", "dang ky hoc phan", "tin chi", "phong dao tao", "lich hoc"]
+}

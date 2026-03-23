@@ -7,7 +7,6 @@ from typing import TypedDict
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from fastapi_pagination import add_pagination
-
 from app.api.exception_handlers import register_exception_handlers
 from app.api.router import api_router
 from app.clients.redis import RedisClient
@@ -30,7 +29,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[LifespanState, None]:
     See: https://asgi.readthedocs.io/en/latest/specs/lifespan.html#lifespan-state
     """
     # === Startup ===
-    setup_logfire()
     from app.core.logfire_setup import instrument_asyncpg
 
     instrument_asyncpg()
@@ -58,6 +56,8 @@ SHOW_DOCS_ENVIRONMENTS = ("local", "staging", "development")
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
+    setup_logfire()
+
     # Only show docs in allowed environments (hide in production)
     show_docs = settings.ENVIRONMENT in SHOW_DOCS_ENVIRONMENTS
     openapi_url = f"{settings.API_V1_STR}/openapi.json" if show_docs else None

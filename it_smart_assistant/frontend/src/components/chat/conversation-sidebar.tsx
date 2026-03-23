@@ -49,7 +49,7 @@ function ConversationItem({
 
   const displayTitle =
     conversation.title ||
-    `Chat ${new Date(conversation.created_at).toLocaleDateString()}`;
+    `Trò chuyện ${new Date(conversation.created_at).toLocaleDateString("vi-VN")}`;
 
   return (
     <div
@@ -112,7 +112,7 @@ function ConversationItem({
                 }}
               >
                 <Pencil className="h-4 w-4" />
-                Rename
+                Đổi tên
               </button>
               <button
                 className="flex w-full items-center gap-2 px-3 py-3 text-sm hover:bg-secondary min-h-[44px]"
@@ -123,7 +123,7 @@ function ConversationItem({
                 }}
               >
                 <Archive className="h-4 w-4" />
-                Archive
+                Lưu trữ
               </button>
               <button
                 className="flex w-full items-center gap-2 px-3 py-3 text-sm text-destructive hover:bg-destructive/10 min-h-[44px]"
@@ -134,7 +134,7 @@ function ConversationItem({
                 }}
               >
                 <Trash2 className="h-4 w-4" />
-                Delete
+                Xóa
               </button>
             </div>
           </>
@@ -189,20 +189,20 @@ function ConversationList({
           onClick={handleNewChat}
         >
           <MessageSquarePlus className="h-4 w-4" />
-          New Chat
+          Cuộc trò chuyện mới
         </Button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 pb-3 scrollbar-thin">
         {isLoading && conversations.length === 0 ? (
           <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-            Loading...
+            Đang tải...
           </div>
         ) : activeConversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center text-sm text-muted-foreground">
             <MessageSquare className="h-8 w-8 mb-2 opacity-50" />
-            <p>No conversations yet</p>
-            <p className="text-xs mt-1">Start a new chat to begin</p>
+            <p>Chưa có cuộc trò chuyện nào</p>
+            <p className="text-xs mt-1">Hãy bắt đầu một cuộc trò chuyện mới</p>
           </div>
         ) : (
           <div className="space-y-1">
@@ -279,7 +279,7 @@ export function ConversationSidebar({ className }: ConversationSidebarProps) {
           size="sm"
           className="h-10 w-10 p-0"
           onClick={startNewChat}
-          title="New Chat"
+          title="Cuộc trò chuyện mới"
         >
           <MessageSquarePlus className="h-4 w-4" />
         </Button>
@@ -296,7 +296,7 @@ export function ConversationSidebar({ className }: ConversationSidebarProps) {
         )}
       >
         <div className="flex items-center justify-between border-b px-4 py-3 h-12">
-          <h2 className="font-semibold text-sm">Conversations</h2>
+          <h2 className="font-semibold text-sm">Cuộc trò chuyện</h2>
           <Button
             variant="ghost"
             size="sm"
@@ -312,7 +312,7 @@ export function ConversationSidebar({ className }: ConversationSidebarProps) {
       <Sheet open={isOpen} onOpenChange={close}>
         <SheetContent side="left" className="w-80 p-0">
           <SheetHeader className="h-12 px-4">
-            <SheetTitle>Conversations</SheetTitle>
+            <SheetTitle>Cuộc trò chuyện</SheetTitle>
             <SheetClose onClick={close} />
           </SheetHeader>
           <div className="flex flex-col h-[calc(100%-48px)]">

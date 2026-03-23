@@ -4,7 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 import { useWebSocket } from "./use-websocket";
 import { useLocalChatStore } from "@/stores/local-chat-store";
-import type { ChatMessage, ToolCall, WSEvent } from "@/types";
+import type { ChatAttachment, ChatMessage, ToolCall, WSEvent } from "@/types";
 import { WS_URL } from "@/lib/constants";
 
 export function useLocalChat() {
@@ -275,7 +275,7 @@ export function useLocalChat() {
   });
 
   const sendChatMessage = useCallback(
-    (content: string) => {
+    (content: string, attachments: ChatAttachment[] = []) => {
       let convId = currentConversationId;
       if (!convId) {
         convId = createConversation();
@@ -286,11 +286,15 @@ export function useLocalChat() {
         role: "user",
         content,
         timestamp: new Date(),
+        attachments,
       };
       addMessage(userMessage);
 
       setIsProcessing(true);
-      sendMessage({ message: content });
+      sendMessage({
+        message: content,
+        attachment_ids: attachments.map((attachment) => attachment.id),
+      });
     },
     [addMessage, sendMessage, currentConversationId, createConversation]
   );

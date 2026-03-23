@@ -170,6 +170,8 @@ async def create_message(
     content: str,
     model_name: str | None = None,
     tokens_used: int | None = None,
+    router_intent: str | None = None,
+    router_reason: str | None = None,
 ) -> Message:
     """Create a new message."""
     message = Message(
@@ -178,6 +180,8 @@ async def create_message(
         content=content,
         model_name=model_name,
         tokens_used=tokens_used,
+        router_intent=router_intent,
+        router_reason=router_reason,
     )
     db.add(message)
     await db.flush()

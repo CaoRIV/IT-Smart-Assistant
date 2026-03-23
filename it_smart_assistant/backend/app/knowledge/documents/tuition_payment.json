@@ -1,0 +1,9 @@
+{
+  "id": "tuition_payment",
+  "title": "Hoc phi va thanh toan",
+  "category": "Tai chinh",
+  "summary": "Hoc phi duoc tinh theo so tin chi dang ky va duoc cong bo tren cong thanh toan cua truong. Sinh vien can nop dung han de tranh bi khoa dang ky hoc phan hoac cham thi.",
+  "content": "Hoc phi thuong duoc cap nhat theo tung hoc ky sau khi sinh vien hoan tat dang ky hoc phan. Sinh vien dang nhap cong thanh toan hoc phi de xem so tien can dong, han thanh toan va cac kenh nop tien duoc chap nhan. Neu gap kho khan tai chinh, sinh vien nen lien he phong ke hoach tai chinh hoac phong cong tac sinh vien de hoi ve chinh sach gia han, hoc bong ho tro hoac vay von. Cham nop hoc phi co the dan den viec tam khoa tai khoan hoc vu theo quy dinh cua nha truong.",
+  "source_url": "https://student.example.edu/faq/hoc-phi-thanh-toan",
+  "keywords": ["hoc phi", "thanh toan", "tai chinh", "gia han hoc phi", "vay von"]
+}

@@ -1,0 +1,9 @@
+{
+  "id": "scholarship_support",
+  "title": "Hoc bong va ho tro tai chinh",
+  "category": "Cong tac sinh vien",
+  "summary": "Sinh vien co the theo doi hoc bong khuyen khich hoc tap, hoc bong doanh nghiep va cac chuong trinh ho tro tai chinh tren cong thong tin sinh vien.",
+  "content": "Thong bao hoc bong thuong duoc phong cong tac sinh vien dang tai theo dot trong nam hoc. Moi chuong trinh se co dieu kien rieng nhu diem trung binh tich luy, diem ren luyen, hoan canh gia dinh hoac thanh tich hoat dong. Sinh vien can chuan bi ho so dung mau, nop trong thoi han va theo doi email truong de bo sung neu duoc yeu cau. Neu muon duoc tu van them, sinh vien lien he bo phan hoc bong cua phong cong tac sinh vien.",
+  "source_url": "https://student.example.edu/faq/hoc-bong-ho-tro",
+  "keywords": ["hoc bong", "ho tro tai chinh", "diem ren luyen", "phong cong tac sinh vien", "doanh nghiep"]
+}

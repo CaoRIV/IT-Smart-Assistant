@@ -1,25 +1,25 @@
 """AI Agent WebSocket routes with streaming support (LangGraph ReAct Agent)."""
 
 import logging
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from langchain_core.messages import (
     AIMessage,
     AIMessageChunk,
-    HumanMessage,
-    SystemMessage,
     ToolMessage,
 )
 
 from app.agents.langgraph_assistant import AgentContext, get_agent
-from app.api.deps import get_conversation_service
+from app.api.deps import get_conversation_service, get_optional_current_user_ws
+from app.db.models.user import User
 from app.db.session import get_db_context
 from app.schemas.conversation import (
     ConversationCreate,
     MessageCreate,
 )
+from app.services.chat_attachment import build_attachment_history_note, load_prompt_attachments
 
 logger = logging.getLogger(__name__)
 
@@ -62,26 +62,21 @@ class AgentConnectionManager:
 manager = AgentConnectionManager()
 
 
-def build_message_history(
-    history: list[dict[str, str]],
-) -> list[HumanMessage | AIMessage | SystemMessage]:
-    """Convert conversation history to LangChain message format."""
-    messages: list[HumanMessage | AIMessage | SystemMessage] = []
+def serialize_message_history(messages: list[Any]) -> list[dict[str, str]]:
+    """Convert persisted conversation messages to agent history format."""
+    history: list[dict[str, str]] = []
 
-    for msg in history:
-        if msg["role"] == "user":
-            messages.append(HumanMessage(content=msg["content"]))
-        elif msg["role"] == "assistant":
-            messages.append(AIMessage(content=msg["content"]))
-        elif msg["role"] == "system":
-            messages.append(SystemMessage(content=msg["content"]))
+    for message in messages:
+        if message.role in {"user", "assistant", "system"}:
+            history.append({"role": message.role, "content": message.content})
 
-    return messages
+    return history
 
 
 @router.websocket("/ws/agent")
 async def agent_websocket(
     websocket: WebSocket,
+    current_user: Annotated[User | None, Depends(get_optional_current_user_ws)],
 ) -> None:
     """WebSocket endpoint for LangGraph ReAct agent with streaming support.
 
@@ -114,18 +109,38 @@ async def agent_websocket(
     context: AgentContext = {}
     current_conversation_id: str | None = None
 
+    if current_user is not None:
+        context = {
+            "user_id": str(current_user.id),
+            "user_name": current_user.full_name or current_user.email,
+        }
+
     try:
         while True:
             # Receive user message
             data = await websocket.receive_json()
             user_message = data.get("message", "")
+            attachment_ids = data.get("attachment_ids", []) or []
             # Optionally accept history from client (or use server-side tracking)
             if "history" in data:
                 conversation_history = data["history"]
 
+            if not user_message and attachment_ids:
+                user_message = "Hay doc va tom tat cac tep dinh kem nay."
+
             if not user_message:
                 await manager.send_event(websocket, "error", {"message": "Empty message"})
                 continue
+
+            history_for_agent = conversation_history
+            user_id = current_user.id if current_user is not None else None
+            prompt_attachments = load_prompt_attachments(attachment_ids) if attachment_ids else []
+            attachment_note = build_attachment_history_note(attachment_ids) if attachment_ids else None
+            persisted_user_message = (
+                f"{user_message}\n\n{attachment_note}" if attachment_note else user_message
+            )
+            assistant = get_agent()
+            route = assistant.route_user_input(user_message, prompt_attachments)
 
             # Handle conversation persistence
             try:
@@ -136,35 +151,59 @@ async def agent_websocket(
                     requested_conv_id = data.get("conversation_id")
                     if requested_conv_id:
                         current_conversation_id = requested_conv_id
-                        # Verify conversation exists
-                        await conv_service.get_conversation(UUID(requested_conv_id))
+                        conversation = await conv_service.get_conversation(
+                            UUID(requested_conv_id),
+                            include_messages=True,
+                            user_id=user_id,
+                        )
+                        if current_user is None and conversation.user_id is not None:
+                            raise ValueError("Conversation not available")
+                        history_for_agent = serialize_message_history(conversation.messages)
                     elif not current_conversation_id:
                         # Create new conversation
                         conv_data = ConversationCreate(
                             title=user_message[:50] if len(user_message) > 50 else user_message,
+                            user_id=user_id,
                         )
                         conversation = await conv_service.create_conversation(conv_data)
                         current_conversation_id = str(conversation.id)
+                        history_for_agent = []
                         await manager.send_event(
                             websocket,
                             "conversation_created",
                             {"conversation_id": current_conversation_id},
                         )
+                    else:
+                        conversation = await conv_service.get_conversation(
+                            UUID(current_conversation_id),
+                            include_messages=True,
+                            user_id=user_id,
+                        )
+                        if current_user is None and conversation.user_id is not None:
+                            raise ValueError("Conversation not available")
+                        history_for_agent = serialize_message_history(conversation.messages)
 
                     # Save user message
                     await conv_service.add_message(
                         UUID(current_conversation_id),
-                        MessageCreate(role="user", content=user_message),
+                        MessageCreate(
+                            role="user",
+                            content=persisted_user_message,
+                            router_intent=route.intent,
+                            router_reason=route.reason,
+                        ),
+                        user_id=user_id,
                     )
             except Exception as e:
                 logger.warning(f"Failed to persist conversation: {e}")
-                # Continue without persistence
+                if "history" in data and isinstance(data["history"], list):
+                    history_for_agent = data["history"]
+                else:
+                    history_for_agent = conversation_history
 
             await manager.send_event(websocket, "user_prompt", {"content": user_message})
 
             try:
-                assistant = get_agent()
-
                 final_output = ""
                 tool_events: list[Any] = []
                 seen_tool_call_ids: set[str] = set()
@@ -174,8 +213,9 @@ async def agent_websocket(
                 # Use LangGraph's astream with messages and updates modes
                 async for stream_mode, data in assistant.stream(
                     user_message,
-                    history=conversation_history,
+                    history=history_for_agent,
                     context=context,
+                    attachments=prompt_attachments,
                 ):
                     if stream_mode == "messages":
                         chunk, _metadata = data
@@ -258,7 +298,10 @@ async def agent_websocket(
                 )
 
                 # Update conversation history
-                conversation_history.append({"role": "user", "content": user_message})
+                conversation_history = [
+                    *history_for_agent,
+                    {"role": "user", "content": persisted_user_message},
+                ]
                 if final_output:
                     conversation_history.append({"role": "assistant", "content": final_output})
 
@@ -267,7 +310,7 @@ async def agent_websocket(
                     try:
                         async with get_db_context() as db:
                             conv_service = get_conversation_service(db)
-                            await conv_service.add_message(
+                            saved_message = await conv_service.add_message(
                                 UUID(current_conversation_id),
                                 MessageCreate(
                                     role="assistant",
@@ -275,7 +318,18 @@ async def agent_websocket(
                                     model_name=assistant.model_name
                                     if hasattr(assistant, "model_name")
                                     else None,
+                                    router_intent=route.intent,
+                                    router_reason=route.reason,
                                 ),
+                                user_id=user_id,
+                            )
+                            await manager.send_event(
+                                websocket,
+                                "assistant_message_saved",
+                                {
+                                    "message_id": str(saved_message.id),
+                                    "conversation_id": current_conversation_id,
+                                },
                             )
                     except Exception as e:
                         logger.warning(f"Failed to persist assistant response: {e}")
