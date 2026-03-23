@@ -21,7 +21,7 @@ export function CopyButton({ text, className, size = "sm" }: CopyButtonProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      console.error("Failed to copy text");
+      console.error("Không thể sao chép nội dung");
     }
   };
 
@@ -34,7 +34,7 @@ export function CopyButton({ text, className, size = "sm" }: CopyButtonProps) {
         className
       )}
       onClick={handleCopy}
-      title={copied ? "Copied!" : "Copy"}
+      title={copied ? "Đã sao chép" : "Sao chép"}
     >
       {copied ? (
         <Check className="h-3.5 w-3.5 text-green-500" />

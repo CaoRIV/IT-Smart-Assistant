@@ -1,0 +1,9 @@
+{
+  "id": "student_confirmation_letter",
+  "title": "Giay xac nhan sinh vien",
+  "category": "Hanh chinh",
+  "summary": "Sinh vien co the xin giay xac nhan sinh vien de bo sung ho so vay von, tam hoan nghia vu hoac cac muc dich hanh chinh khac.",
+  "content": "De xin giay xac nhan sinh vien, sinh vien nop yeu cau tren cong dich vu sinh vien hoac tai bo phan mot cua phong cong tac sinh vien. Ho so thuong gom ma so sinh vien, can cuoc cong dan va thong tin muc dich su dung giay xac nhan. Thoi gian xu ly thong thuong tu 1 den 3 ngay lam viec. Neu can ban giay co dau moc, sinh vien den nhan truc tiep theo lich hen hoac dang ky nhan qua duong buu dien neu nha truong co ho tro.",
+  "source_url": "https://student.example.edu/faq/giay-xac-nhan-sinh-vien",
+  "keywords": ["giay xac nhan", "cong tac sinh vien", "ho so", "mot cua", "hanh chinh"]
+}

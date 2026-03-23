@@ -4,7 +4,7 @@
 from fastapi import APIRouter
 
 from app.api.routes.v1 import health
-from app.api.routes.v1 import auth, users
+from app.api.routes.v1 import analytics, auth, chat_attachments, feedback, form_exports, knowledge_admin, users
 from app.api.routes.v1 import sessions
 from app.api.routes.v1 import items
 from app.api.routes.v1 import conversations
@@ -30,6 +30,21 @@ v1_router.include_router(items.router, prefix="/items", tags=["items"])
 
 # Conversation routes (AI chat persistence)
 v1_router.include_router(conversations.router, prefix="/conversations", tags=["conversations"])
+
+# Chat attachment routes
+v1_router.include_router(chat_attachments.router, tags=["chat-attachments"])
+
+# Form export routes
+v1_router.include_router(form_exports.router, tags=["form-exports"])
+
+# Knowledge admin routes
+v1_router.include_router(knowledge_admin.router, tags=["knowledge-admin"])
+
+# Feedback routes
+v1_router.include_router(feedback.router, tags=["feedback"])
+
+# Analytics routes
+v1_router.include_router(analytics.router, tags=["analytics"])
 
 # WebSocket routes
 v1_router.include_router(ws.router, tags=["websocket"])

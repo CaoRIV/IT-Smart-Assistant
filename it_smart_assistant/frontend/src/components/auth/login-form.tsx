@@ -3,7 +3,16 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks";
-import { Button, Input, Label, Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui";
+import {
+  Button,
+  Input,
+  Label,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from "@/components/ui";
 import { ApiError } from "@/lib/api-client";
 import { ROUTES } from "@/lib/constants";
 
@@ -25,7 +34,7 @@ export function LoginForm() {
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError("Login failed. Please try again.");
+        setError("Đăng nhập thất bại. Vui lòng thử lại.");
       }
       setIsLoading(false);
     }
@@ -34,7 +43,7 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle className="text-2xl text-center">Login</CardTitle>
+        <CardTitle className="text-2xl text-center">Đăng nhập</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -51,7 +60,7 @@ export function LoginForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Mật khẩu</Label>
             <Input
               id="password"
               type="password"
@@ -61,19 +70,17 @@ export function LoginForm() {
               disabled={isLoading}
             />
           </div>
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
+          {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Logging in..." : "Login"}
+            {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
           </Button>
         </form>
       </CardContent>
       <CardFooter className="justify-center">
         <p className="text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
+          Chưa có tài khoản?{" "}
           <Link href={ROUTES.REGISTER} className="text-primary hover:underline">
-            Register
+            Đăng ký
           </Link>
         </p>
       </CardFooter>

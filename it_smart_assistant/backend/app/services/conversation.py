@@ -30,11 +30,25 @@ class ConversationService:
     # Conversation Methods
     # =========================================================================
 
+    @staticmethod
+    def _ensure_conversation_access(
+        conversation: Conversation,
+        user_id: UUID | None,
+    ) -> Conversation:
+        """Ensure the current user can access the conversation."""
+        if user_id is not None and conversation.user_id != user_id:
+            raise NotFoundError(
+                message="Conversation not found",
+                details={"conversation_id": str(conversation.id)},
+            )
+        return conversation
+
     async def get_conversation(
         self,
         conversation_id: UUID,
         *,
         include_messages: bool = False,
+        user_id: UUID | None = None,
     ) -> Conversation:
         """Get conversation by ID.
 
@@ -49,7 +63,7 @@ class ConversationService:
                 message="Conversation not found",
                 details={"conversation_id": str(conversation_id)},
             )
-        return conversation
+        return self._ensure_conversation_access(conversation, user_id)
 
     async def list_conversations(
         self,
@@ -93,24 +107,30 @@ class ConversationService:
         self,
         conversation_id: UUID,
         data: ConversationUpdate,
+        user_id: UUID | None = None,
     ) -> Conversation:
         """Update a conversation.
 
         Raises:
             NotFoundError: If conversation does not exist.
         """
-        conversation = await self.get_conversation(conversation_id)
+        conversation = await self.get_conversation(conversation_id, user_id=user_id)
         update_data = data.model_dump(exclude_unset=True)
         return await conversation_repo.update_conversation(
             self.db, db_conversation=conversation, update_data=update_data
         )
 
-    async def archive_conversation(self, conversation_id: UUID) -> Conversation:
+    async def archive_conversation(
+        self,
+        conversation_id: UUID,
+        user_id: UUID | None = None,
+    ) -> Conversation:
         """Archive a conversation.
 
         Raises:
             NotFoundError: If conversation does not exist.
         """
+        await self.get_conversation(conversation_id, user_id=user_id)
         conversation = await conversation_repo.archive_conversation(self.db, conversation_id)
         if not conversation:
             raise NotFoundError(
@@ -119,12 +139,17 @@ class ConversationService:
             )
         return conversation
 
-    async def delete_conversation(self, conversation_id: UUID) -> bool:
+    async def delete_conversation(
+        self,
+        conversation_id: UUID,
+        user_id: UUID | None = None,
+    ) -> bool:
         """Delete a conversation.
 
         Raises:
             NotFoundError: If conversation does not exist.
         """
+        await self.get_conversation(conversation_id, user_id=user_id)
         deleted = await conversation_repo.delete_conversation(self.db, conversation_id)
         if not deleted:
             raise NotFoundError(
@@ -158,6 +183,7 @@ class ConversationService:
         skip: int = 0,
         limit: int = 100,
         include_tool_calls: bool = False,
+        user_id: UUID | None = None,
     ) -> tuple[list[Message], int]:
         """List messages in a conversation.
 
@@ -165,7 +191,7 @@ class ConversationService:
             Tuple of (messages, total_count).
         """
         # Verify conversation exists
-        await self.get_conversation(conversation_id)
+        await self.get_conversation(conversation_id, user_id=user_id)
         items = await conversation_repo.get_messages_by_conversation(
             self.db,
             conversation_id,
@@ -180,6 +206,7 @@ class ConversationService:
         self,
         conversation_id: UUID,
         data: MessageCreate,
+        user_id: UUID | None = None,
     ) -> Message:
         """Add a message to a conversation.
 
@@ -187,7 +214,7 @@ class ConversationService:
             NotFoundError: If conversation does not exist.
         """
         # Verify conversation exists
-        await self.get_conversation(conversation_id)
+        await self.get_conversation(conversation_id, user_id=user_id)
         return await conversation_repo.create_message(
             self.db,
             conversation_id=conversation_id,
@@ -195,6 +222,8 @@ class ConversationService:
             content=data.content,
             model_name=data.model_name,
             tokens_used=data.tokens_used,
+            router_intent=data.router_intent,
+            router_reason=data.router_reason,
         )
 
     async def delete_message(self, message_id: UUID) -> bool:

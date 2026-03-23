@@ -1,0 +1,60 @@
+{
+  "title": "Don xin bao luu hoc tap",
+  "category": "Hoc vu",
+  "description": "Bieu mau danh cho sinh vien xin tam ngung hoc trong mot thoi gian.",
+  "source_url": null,
+  "keywords": [
+    "bao luu",
+    "tam ngung hoc",
+    "don bao luu",
+    "Hoc vu",
+    "Don xin bao luu hoc tap"
+  ],
+  "fields": [
+    {
+      "name": "full_name",
+      "label": "Ho va ten",
+      "type": "text",
+      "required": true,
+      "placeholder": "Nhap ho va ten"
+    },
+    {
+      "name": "student_id",
+      "label": "Ma sinh vien",
+      "type": "text",
+      "required": true,
+      "placeholder": "Nhap ma sinh vien"
+    },
+    {
+      "name": "class_name",
+      "label": "Lop",
+      "type": "text",
+      "required": true,
+      "placeholder": "Nhap lop"
+    },
+    {
+      "name": "faculty",
+      "label": "Khoa",
+      "type": "text",
+      "required": true,
+      "placeholder": "Nhap khoa"
+    },
+    {
+      "name": "reason",
+      "label": "Ly do bao luu",
+      "type": "text",
+      "required": true,
+      "placeholder": "Nhap ly do"
+    },
+    {
+      "name": "duration",
+      "label": "Thoi gian bao luu",
+      "type": "text",
+      "required": true,
+      "placeholder": "Vi du: Hoc ky 1 nam hoc 2026-2027"
+    }
+  ],
+  "id": "hoc-vu-don-xin-bao-luu-hoc-tap",
+  "created_at": "2026-03-17T15:05:55.443546+00:00",
+  "updated_at": "2026-03-17T15:05:55.443546+00:00"
+}

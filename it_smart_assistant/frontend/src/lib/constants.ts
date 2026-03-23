@@ -2,8 +2,8 @@
  * Application constants.
  */
 
-export const APP_NAME = "it_smart_assistant";
-export const APP_DESCRIPTION = "My FastAPI project";
+export const APP_NAME = "IT - Smart - UTC";
+export const APP_DESCRIPTION = "Trợ lý tư vấn thông minh dành cho sinh viên UTC";
 
 // API Routes (Next.js internal routes)
 export const API_ROUTES = {
@@ -31,6 +31,7 @@ export const ROUTES = {
   REGISTER: "/register",
   DASHBOARD: "/dashboard",
   CHAT: "/chat",
+  KNOWLEDGE_ADMIN: "/knowledge-admin",
   PROFILE: "/profile",
   SETTINGS: "/settings",
 } as const;

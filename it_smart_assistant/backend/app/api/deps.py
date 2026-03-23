@@ -33,6 +33,8 @@ from app.services.user import UserService
 from app.services.session import SessionService
 from app.services.item import ItemService
 from app.services.conversation import ConversationService
+from app.services.feedback import FeedbackService
+from app.services.analytics import AnalyticsService
 
 
 def get_user_service(db: DBSession) -> UserService:
@@ -63,6 +65,22 @@ def get_conversation_service(db: DBSession) -> ConversationService:
 
 
 ConversationSvc = Annotated[ConversationService, Depends(get_conversation_service)]
+
+
+def get_feedback_service(db: DBSession) -> FeedbackService:
+    """Create FeedbackService instance with database session."""
+    return FeedbackService(db)
+
+
+FeedbackSvc = Annotated[FeedbackService, Depends(get_feedback_service)]
+
+
+def get_analytics_service(db: DBSession) -> AnalyticsService:
+    """Create AnalyticsService instance with database session."""
+    return AnalyticsService(db)
+
+
+AnalyticsSvc = Annotated[AnalyticsService, Depends(get_analytics_service)]
 
 # === Authentication Dependencies ===
 
@@ -167,43 +185,21 @@ CurrentAdmin = Annotated[User, Depends(RoleChecker(UserRole.ADMIN))]
 from fastapi import WebSocket, Query, Cookie
 
 
-async def get_current_user_ws(
-    websocket: WebSocket,
-    token: str | None = Query(None, alias="token"),
-    access_token: str | None = Cookie(None),
-) -> User:
-    """Get current user from WebSocket JWT token.
-
-    Token can be passed either as:
-    - Query parameter: ws://...?token=<jwt>
-    - Cookie: access_token cookie (set by HTTP login)
-
-    Raises:
-        AuthenticationError: If token is invalid or user not found.
-    """
+async def _get_user_from_auth_token(auth_token: str) -> User:
+    """Resolve a user from a validated auth token."""
     from uuid import UUID
 
     from app.core.security import verify_token
 
-    # Try query parameter first, then cookie
-    auth_token = token or access_token
-
-    if not auth_token:
-        await websocket.close(code=4001, reason="Missing authentication token")
-        raise AuthenticationError(message="Missing authentication token")
-
     payload = verify_token(auth_token)
     if payload is None:
-        await websocket.close(code=4001, reason="Invalid or expired token")
         raise AuthenticationError(message="Invalid or expired token")
 
     if payload.get("type") != "access":
-        await websocket.close(code=4001, reason="Invalid token type")
         raise AuthenticationError(message="Invalid token type")
 
     user_id = payload.get("sub")
     if user_id is None:
-        await websocket.close(code=4001, reason="Invalid token payload")
         raise AuthenticationError(message="Invalid token payload")
 
     from app.db.session import get_db_context
@@ -213,7 +209,43 @@ async def get_current_user_ws(
         user = await user_service.get_by_id(UUID(user_id))
 
     if not user.is_active:
-        await websocket.close(code=4001, reason="User account is disabled")
         raise AuthenticationError(message="User account is disabled")
 
     return user
+
+
+async def get_current_user_ws(
+    websocket: WebSocket,
+    token: str | None = Query(None, alias="token"),
+    access_token: str | None = Cookie(None),
+) -> User:
+    """Get current user from WebSocket JWT token."""
+    auth_token = token or access_token
+
+    if not auth_token:
+        await websocket.close(code=4001, reason="Missing authentication token")
+        raise AuthenticationError(message="Missing authentication token")
+
+    try:
+        return await _get_user_from_auth_token(auth_token)
+    except AuthenticationError as exc:
+        await websocket.close(code=4001, reason=exc.message)
+        raise
+
+
+async def get_optional_current_user_ws(
+    websocket: WebSocket,
+    token: str | None = Query(None, alias="token"),
+    access_token: str | None = Cookie(None),
+) -> User | None:
+    """Resolve the current WebSocket user when a token is present."""
+    auth_token = token or access_token
+
+    if not auth_token:
+        return None
+
+    try:
+        return await _get_user_from_auth_token(auth_token)
+    except AuthenticationError as exc:
+        await websocket.close(code=4001, reason=exc.message)
+        raise

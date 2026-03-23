@@ -1,0 +1,106 @@
+{
+  "document_id": "hoc-phi-qd-2209-q-hoc-phi-cac-lop-quy-mo-nho-duoi-15-sinh-vien-hoc-ky-i-nam-hoc-25-26",
+  "title": "QD 2209 QĐ học phí các lớp quy mô nhỏ (dưới 15 sinh viên) học kỳ I năm học 25 26",
+  "category": "Hoc Phi",
+  "source_path": "knowledge_raw/hoc_phi/QD_2209 QĐ học phí các lớp quy mô nhỏ (dưới 15 sinh viên)  học kỳ I năm học 25-26.pdf",
+  "source_url": "",
+  "tables": [
+    {
+      "table_id": "hoc-phi-qd-2209-q-hoc-phi-cac-lop-quy-mo-nho-duoi-15-sinh-vien-hoc-ky-i-nam-hoc-25-26-table-01",
+      "title": "I. Muc thu cac lop dai hoc chinh quy khoa 61 tro ve truoc",
+      "page_from": 2,
+      "page_to": 2,
+      "rows": [
+        {
+          "row_id": "1",
+          "label": "Nhom 1: tir 1 den 6 sinh vien _ _",
+          "amount_text": "1.210.200 dong",
+          "amount_value": 1210200,
+          "page_from": 2,
+          "page_to": 2,
+          "track_tags": [
+            "chinh_quy"
+          ],
+          "basis_tags": [],
+          "search_text": "I. Muc thu cac lop dai hoc chinh quy khoa 61 tro ve truoc Nhom 1: tir 1 den 6 sinh vien _ _ 1.210.200 dong hoc phi chinh quy dai hoc"
+        },
+        {
+          "row_id": "2",
+          "label": "Nhom 2: tir 7 den 14 sinh vien",
+          "amount_text": "789.261 dong",
+          "amount_value": 789261,
+          "page_from": 2,
+          "page_to": 2,
+          "track_tags": [
+            "chinh_quy"
+          ],
+          "basis_tags": [],
+          "search_text": "I. Muc thu cac lop dai hoc chinh quy khoa 61 tro ve truoc Nhom 2: tir 7 den 14 sinh vien 789.261 dong hoc phi chinh quy dai hoc"
+        }
+      ]
+    },
+    {
+      "table_id": "hoc-phi-qd-2209-q-hoc-phi-cac-lop-quy-mo-nho-duoi-15-sinh-vien-hoc-ky-i-nam-hoc-25-26-table-02",
+      "title": "IL Muc thu cac lop dai hoc chinh quy khoa 62 trd’ve sau",
+      "page_from": 2,
+      "page_to": 2,
+      "rows": [
+        {
+          "row_id": "1",
+          "label": "Nhom 1: tu' 1 den 6 sinh vien",
+          "amount_text": "1.473.287 dong",
+          "amount_value": 1473287,
+          "page_from": 2,
+          "page_to": 2,
+          "track_tags": [
+            "chinh_quy"
+          ],
+          "basis_tags": [],
+          "search_text": "IL Muc thu cac lop dai hoc chinh quy khoa 62 trd’ve sau Nhom 1: tu' 1 den 6 sinh vien 1.473.287 dong hoc phi chinh quy dai hoc"
+        },
+        {
+          "row_id": "2",
+          "label": "Nhom 2: tu1 7 den 14 sinh vien III. Mire thu cac lop he Lien thong, bang 2 chinh quy, Vila lam vua hocC g\\^ “C",
+          "amount_text": "1.053.348 dong",
+          "amount_value": 1053348,
+          "page_from": 2,
+          "page_to": 2,
+          "track_tags": [
+            "lien_thong",
+            "bang_2"
+          ],
+          "basis_tags": [
+            "per_credit"
+          ],
+          "search_text": "IL Muc thu cac lop dai hoc chinh quy khoa 62 trd’ve sau Nhom 2: tu1 7 den 14 sinh vien III. Mire thu cac lop he Lien thong, bang 2 chinh quy, Vila lam vua hocC g\\^ “C 1.053.348 dong hoc phi lien thong bang 2 tin chi 1 tin chi"
+        },
+        {
+          "row_id": "1",
+          "label": "Nhom 1: tir 1 den 6 sinh vien",
+          "amount_text": "1.473.287 dong",
+          "amount_value": 1473287,
+          "page_from": 2,
+          "page_to": 2,
+          "track_tags": [
+            "chinh_quy"
+          ],
+          "basis_tags": [],
+          "search_text": "IL Muc thu cac lop dai hoc chinh quy khoa 62 trd’ve sau Nhom 1: tir 1 den 6 sinh vien 1.473.287 dong hoc phi chinh quy dai hoc"
+        },
+        {
+          "row_id": "2",
+          "label": "Nhom 2: tu 7 den 14 sinh vien",
+          "amount_text": "1.053.348 dong",
+          "amount_value": 1053348,
+          "page_from": 2,
+          "page_to": 2,
+          "track_tags": [
+            "chinh_quy"
+          ],
+          "basis_tags": [],
+          "search_text": "IL Muc thu cac lop dai hoc chinh quy khoa 62 trd’ve sau Nhom 2: tu 7 den 14 sinh vien 1.053.348 dong hoc phi chinh quy dai hoc"
+        }
+      ]
+    }
+  ]
+}

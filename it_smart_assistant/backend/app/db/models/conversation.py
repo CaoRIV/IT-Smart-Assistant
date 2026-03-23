@@ -71,6 +71,8 @@ class Message(Base, TimestampMixin):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     model_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     tokens_used: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    router_intent: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
+    router_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Relationships
     conversation: Mapped["Conversation"] = relationship("Conversation", back_populates="messages")

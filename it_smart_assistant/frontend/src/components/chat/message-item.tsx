@@ -5,7 +5,8 @@ import type { ChatMessage } from "@/types";
 import { ToolCallCard } from "./tool-call-card";
 import { MarkdownContent } from "./markdown-content";
 import { CopyButton } from "./copy-button";
-import { User, Bot } from "lucide-react";
+import { MessageFeedback } from "./message-feedback";
+import { FileText, ImageIcon, User, Bot } from "lucide-react";
 
 interface MessageItemProps {
   message: ChatMessage;
@@ -24,7 +25,6 @@ export function MessageItem({ message, groupPosition }: MessageItemProps) {
         isUser && "flex-row-reverse"
       )}
     >
-      {/* Timeline connector line for grouped messages */}
       {isGrouped && !isUser && (
         <div
           className="absolute left-[15px] sm:left-[17px] w-0.5 bg-orange-500/40"
@@ -48,22 +48,41 @@ export function MessageItem({ message, groupPosition }: MessageItemProps) {
         {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4 sm:h-5 sm:w-5" />}
       </div>
 
-      <div className={cn(
-        "flex-1 space-y-2 overflow-hidden max-w-[88%] sm:max-w-[85%]",
-        isUser && "flex flex-col items-end"
-      )}>
-        {/* Only show message bubble if there's content or if it's streaming without tool calls */}
+      <div
+        className={cn(
+          "flex-1 space-y-2 overflow-hidden max-w-[88%] sm:max-w-[85%]",
+          isUser && "flex flex-col items-end"
+        )}
+      >
+        {message.attachments && message.attachments.length > 0 && (
+          <div className="flex w-full flex-wrap gap-2">
+            {message.attachments.map((attachment) => (
+              <div
+                key={attachment.id}
+                className="inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground"
+              >
+                {attachment.kind === "image" ? (
+                  <ImageIcon className="h-3.5 w-3.5" />
+                ) : (
+                  <FileText className="h-3.5 w-3.5" />
+                )}
+                <span className="max-w-52 truncate">{attachment.file_name}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {(message.content || (message.isStreaming && (!message.toolCalls || message.toolCalls.length === 0))) && (
-          <div className={cn(
-            "relative rounded-2xl px-3 py-2 sm:px-4 sm:py-2.5",
-            isUser
-              ? "bg-primary text-primary-foreground rounded-tr-sm"
-              : "bg-muted rounded-tl-sm"
-          )}>
+          <div
+            className={cn(
+              "relative rounded-2xl px-3 py-2 sm:px-4 sm:py-2.5",
+              isUser
+                ? "bg-primary text-primary-foreground rounded-tr-sm"
+                : "bg-muted rounded-tl-sm"
+            )}
+          >
             {isUser ? (
-              <p className="whitespace-pre-wrap break-words text-sm">
-                {message.content}
-              </p>
+              <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>
             ) : (
               <div className="text-sm prose-sm max-w-none">
                 <MarkdownContent content={message.content} />
@@ -82,6 +101,13 @@ export function MessageItem({ message, groupPosition }: MessageItemProps) {
               </div>
             )}
           </div>
+        )}
+
+        {!isUser && !message.isStreaming && message.backendMessageId && (
+          <MessageFeedback
+            messageId={message.backendMessageId}
+            helpful={message.feedbackHelpful}
+          />
         )}
 
         {message.toolCalls && message.toolCalls.length > 0 && (

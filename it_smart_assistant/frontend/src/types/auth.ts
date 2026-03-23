@@ -5,9 +5,10 @@
 export interface User {
   id: string;
   email: string;
-  name?: string;
+  full_name?: string;
   is_active: boolean;
   is_superuser?: boolean;
+  role?: "admin" | "user";
   created_at: string;
 }
 
@@ -20,19 +21,18 @@ export interface LoginResponse {
   access_token: string;
   refresh_token: string;
   token_type: string;
-  user: User;
 }
 
 export interface RegisterRequest {
   email: string;
   password: string;
-  name?: string;
+  full_name?: string;
 }
 
 export interface RegisterResponse {
   id: string;
   email: string;
-  name?: string;
+  full_name?: string;
 }
 
 export interface RefreshTokenRequest {
@@ -41,6 +41,7 @@ export interface RefreshTokenRequest {
 
 export interface RefreshTokenResponse {
   access_token: string;
+  refresh_token: string;
   token_type: string;
 }
 

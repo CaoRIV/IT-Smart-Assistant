@@ -4,7 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 import { useWebSocket } from "./use-websocket";
 import { useChatStore } from "@/stores";
-import type { ChatMessage, ToolCall, WSEvent } from "@/types";
+import type { ChatAttachment, ChatMessage, ToolCall, WSEvent } from "@/types";
 import { WS_URL } from "@/lib/constants";
 import { useConversationStore } from "@/stores";
 interface UseChatOptions {
@@ -46,6 +46,7 @@ export function useChat(options: UseChatOptions = {}) {
         const newMsgId = nanoid();
         addMessage({
           id: newMsgId,
+          backendMessageId: undefined,
           role: "assistant",
           content,
           timestamp: new Date(),
@@ -69,6 +70,17 @@ export function useChat(options: UseChatOptions = {}) {
         case "message_saved": {
           // Message was saved to database, update local ID if needed
           // We don't need to do anything special here for now
+          break;
+        }
+
+        case "assistant_message_saved": {
+          if (currentMessageId) {
+            const { message_id } = wsEvent.data as { message_id: string };
+            updateMessage(currentMessageId, (msg) => ({
+              ...msg,
+              backendMessageId: message_id,
+            }));
+          }
           break;
         }
 
@@ -297,13 +309,15 @@ export function useChat(options: UseChatOptions = {}) {
   });
 
   const sendChatMessage = useCallback(
-    (content: string) => {
+    (content: string, attachments: ChatAttachment[] = []) => {
       // Add user message
       const userMessage: ChatMessage = {
         id: nanoid(),
         role: "user",
         content,
         timestamp: new Date(),
+        backendMessageId: undefined,
+        attachments,
       };
       addMessage(userMessage);
 
@@ -312,6 +326,7 @@ export function useChat(options: UseChatOptions = {}) {
       sendMessage({
         message: content,
         conversation_id: conversationId || null,
+        attachment_ids: attachments.map((attachment) => attachment.id),
       });
     },
     [addMessage, sendMessage, conversationId]

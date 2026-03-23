@@ -1,0 +1,53 @@
+{
+  "title": "Don xin rut hoc phan",
+  "category": "Hoc vu",
+  "description": "Bieu mau de de nghi rut hoc phan da dang ky trong hoc ky.",
+  "source_url": null,
+  "keywords": [
+    "rut hoc phan",
+    "huy mon",
+    "rut mon hoc",
+    "Hoc vu",
+    "Don xin rut hoc phan"
+  ],
+  "fields": [
+    {
+      "name": "full_name",
+      "label": "Ho va ten",
+      "type": "text",
+      "required": true,
+      "placeholder": "Nhap ho va ten"
+    },
+    {
+      "name": "student_id",
+      "label": "Ma sinh vien",
+      "type": "text",
+      "required": true,
+      "placeholder": "Nhap ma sinh vien"
+    },
+    {
+      "name": "course_code",
+      "label": "Ma hoc phan",
+      "type": "text",
+      "required": true,
+      "placeholder": "Nhap ma hoc phan"
+    },
+    {
+      "name": "course_name",
+      "label": "Ten hoc phan",
+      "type": "text",
+      "required": true,
+      "placeholder": "Nhap ten hoc phan"
+    },
+    {
+      "name": "reason",
+      "label": "Ly do rut hoc phan",
+      "type": "text",
+      "required": true,
+      "placeholder": "Nhap ly do"
+    }
+  ],
+  "id": "hoc-vu-don-xin-rut-hoc-phan",
+  "created_at": "2026-03-17T15:05:55.443546+00:00",
+  "updated_at": "2026-03-17T15:05:55.443546+00:00"
+}

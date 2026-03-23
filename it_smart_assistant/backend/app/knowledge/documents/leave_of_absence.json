@@ -1,0 +1,9 @@
+{
+  "id": "leave_of_absence",
+  "title": "Bao luu ket qua hoc tap",
+  "category": "Hoc vu",
+  "summary": "Sinh vien co the xin bao luu vi ly do suc khoe, nghia vu quan su, hoan canh ca nhan dac biet hoac cac ly do duoc nha truong chap thuan.",
+  "content": "Sinh vien muon bao luu ket qua hoc tap can nop don xin bao luu kem minh chung phu hop cho phong dao tao. Minh chung co the la giay xac nhan y te, lenh goi nghia vu, hoac tai lieu chung minh hoan canh dac biet. Don bao luu can ghi ro thoi gian de nghi bao luu va thong tin lien he. Trong thoi gian bao luu, sinh vien khong dang ky hoc phan moi va can theo doi thong bao de lam thu tuc quay lai hoc tap dung han. Khi tro lai, sinh vien lien he phong dao tao de duoc sap xep ke hoach hoc tiep.",
+  "source_url": "https://student.example.edu/faq/bao-luu-ket-qua-hoc-tap",
+  "keywords": ["bao luu", "tam dung hoc", "nghia vu quan su", "suc khoe", "phong dao tao"]
+}

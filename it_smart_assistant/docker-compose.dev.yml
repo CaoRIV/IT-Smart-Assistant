@@ -1,9 +1,6 @@
 
-# Development configuration (alias for docker-compose.yml)
-# Usage: docker-compose -f docker-compose.dev.yml up -d
-#
-# This file is identical to docker-compose.yml for explicit naming preference.
-# Use docker-compose.yml for default development.
+# Development stack alias for docker-compose.yml
+# Usage: docker compose -f docker-compose.dev.yml up -d
 
 services:
   app:
@@ -16,6 +13,12 @@ services:
     volumes:
       - ./backend/app:/app/app:ro
       - ./backend/cli:/app/cli:ro
+      - ./backend/alembic:/app/alembic:ro
+      - ./backend/alembic.ini:/app/alembic.ini:ro
+      - ./knowledge_raw:/app/knowledge_raw
+      - ./knowledge_processed:/app/knowledge_processed
+      - ./knowledge_admin:/app/knowledge_admin
+      - ./backend/uploads:/app/uploads
     env_file:
       - ./backend/.env
     environment:
@@ -23,6 +26,13 @@ services:
       - ENVIRONMENT=local
       - POSTGRES_HOST=db
       - REDIS_HOST=redis
+      - REDIS_PASSWORD=
+      - STORAGE_BACKEND=s3
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - S3_BUCKET=${S3_BUCKET:-it-smart-assistant}
+      - S3_REGION=us-east-1
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     networks:
       - backend
@@ -31,10 +41,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: it_smart_assistant_db
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
@@ -42,12 +54,13 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-it_smart_assistant}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     ports:
       - "5432:5432"
     networks:
       - backend
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-it_smart_assistant}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -69,6 +82,86 @@ services:
       retries: 5
     restart: unless-stopped
 
+  minio:
+    image: minio/minio:latest
+    container_name: it_smart_assistant_minio
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - backend
+    restart: unless-stopped
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: it_smart_assistant_minio_init
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until /usr/bin/mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin}; do
+        echo 'Waiting for MinIO...';
+        sleep 2;
+      done;
+      /usr/bin/mc mb --ignore-existing local/${S3_BUCKET:-it-smart-assistant};
+      /usr/bin/mc anonymous set private local/${S3_BUCKET:-it-smart-assistant};
+      echo 'MinIO bucket is ready.';
+      "
+    networks:
+      - backend
+    restart: "no"
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: it_smart_assistant_worker
+    volumes:
+      - ./backend/app:/app/app:ro
+      - ./backend/cli:/app/cli:ro
+      - ./backend/alembic:/app/alembic:ro
+      - ./backend/alembic.ini:/app/alembic.ini:ro
+      - ./knowledge_raw:/app/knowledge_raw
+      - ./knowledge_processed:/app/knowledge_processed
+      - ./knowledge_admin:/app/knowledge_admin
+      - ./backend/uploads:/app/uploads
+    env_file:
+      - ./backend/.env
+    environment:
+      - DEBUG=true
+      - ENVIRONMENT=local
+      - POSTGRES_HOST=db
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=
+      - STORAGE_BACKEND=s3
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - S3_BUCKET=${S3_BUCKET:-it-smart-assistant}
+      - S3_REGION=us-east-1
+    command: python -m app.workers.main
+    networks:
+      - backend
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "print('worker-ok')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
 networks:
   backend:
     driver: bridge
@@ -76,3 +169,4 @@ networks:
 volumes:
   postgres_data:
   redis_data:
+  minio_data:

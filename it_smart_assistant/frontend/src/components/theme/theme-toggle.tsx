@@ -36,7 +36,7 @@ export function ThemeToggle({ variant = "icon", className }: ThemeToggleProps) {
         variant="ghost"
         size="icon"
         className={className}
-        aria-label="Toggle theme"
+        aria-label="Chuyển giao diện"
       >
         <Sun className="h-5 w-5" />
       </Button>
@@ -50,8 +50,8 @@ export function ThemeToggle({ variant = "icon", className }: ThemeToggleProps) {
         size="icon"
         onClick={cycleTheme}
         className={className}
-        aria-label={`Switch theme (current: ${theme})`}
-        title={`Theme: ${theme}`}
+        aria-label={`Chuyển giao diện, hiện tại là ${theme}`}
+        title={`Giao diện: ${theme}`}
       >
         {resolvedTheme === "dark" ? (
           <Moon className="h-5 w-5" />
@@ -59,7 +59,7 @@ export function ThemeToggle({ variant = "icon", className }: ThemeToggleProps) {
           <Sun className="h-5 w-5" />
         )}
         {theme === "system" && (
-          <span className="sr-only">(following system)</span>
+          <span className="sr-only">(theo hệ thống)</span>
         )}
       </Button>
     );
@@ -71,8 +71,8 @@ export function ThemeToggle({ variant = "icon", className }: ThemeToggleProps) {
         variant={theme === "light" ? "default" : "ghost"}
         size="icon"
         onClick={() => setTheme("light")}
-        aria-label="Light mode"
-        title="Light mode"
+        aria-label="Giao diện sáng"
+        title="Giao diện sáng"
       >
         <Sun className="h-4 w-4" />
       </Button>
@@ -80,8 +80,8 @@ export function ThemeToggle({ variant = "icon", className }: ThemeToggleProps) {
         variant={theme === "dark" ? "default" : "ghost"}
         size="icon"
         onClick={() => setTheme("dark")}
-        aria-label="Dark mode"
-        title="Dark mode"
+        aria-label="Giao diện tối"
+        title="Giao diện tối"
       >
         <Moon className="h-4 w-4" />
       </Button>
@@ -89,8 +89,8 @@ export function ThemeToggle({ variant = "icon", className }: ThemeToggleProps) {
         variant={theme === "system" ? "default" : "ghost"}
         size="icon"
         onClick={() => setTheme("system")}
-        aria-label="System theme"
-        title="System theme"
+        aria-label="Theo hệ thống"
+        title="Theo hệ thống"
       >
         <Monitor className="h-4 w-4" />
       </Button>

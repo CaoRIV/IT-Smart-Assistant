@@ -2,19 +2,28 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { APP_NAME, ROUTES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { ROUTES } from "@/lib/constants";
-import { LayoutDashboard, MessageSquare } from "lucide-react";
+import { LayoutDashboard, MessageSquare, BookOpenText } from "lucide-react";
 import { useSidebarStore } from "@/stores";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from "@/components/ui";
+import { useAuth } from "@/hooks";
 
-const navigation = [
-  { name: "Dashboard", href: ROUTES.DASHBOARD, icon: LayoutDashboard },
-  { name: "Chat", href: ROUTES.CHAT, icon: MessageSquare },
+const baseNavigation = [
+  { name: "Tổng quan", href: ROUTES.DASHBOARD, icon: LayoutDashboard },
+  { name: "Trò chuyện", href: ROUTES.CHAT, icon: MessageSquare },
 ];
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  const navigation = [
+    ...baseNavigation,
+    ...(user?.role === "admin"
+      ? [{ name: "Quản lý tri thức", href: ROUTES.KNOWLEDGE_ADMIN, icon: BookOpenText }]
+      : []),
+  ];
 
   return (
     <nav className="flex-1 space-y-1 p-4">
@@ -51,7 +60,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           className="flex items-center gap-2 font-semibold"
           onClick={onNavigate}
         >
-          <span>{"it_smart_assistant"}</span>
+          <span>{APP_NAME}</span>
         </Link>
       </div>
       <NavLinks onNavigate={onNavigate} />
@@ -71,7 +80,7 @@ export function Sidebar() {
       <Sheet open={isOpen} onOpenChange={close}>
         <SheetContent side="left" className="w-72 p-0">
           <SheetHeader className="h-14 px-4">
-            <SheetTitle>{"it_smart_assistant"}</SheetTitle>
+            <SheetTitle>{APP_NAME}</SheetTitle>
             <SheetClose onClick={close} />
           </SheetHeader>
           <NavLinks onNavigate={close} />

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button, Card, CardHeader, CardTitle, CardContent } from "@/components/ui";
-import { ROUTES } from "@/lib/constants";
+import { APP_DESCRIPTION, APP_NAME, ROUTES } from "@/lib/constants";
 
 export default function HomePage() {
   return (
@@ -8,10 +8,10 @@ export default function HomePage() {
       <div className="container mx-auto py-16 px-4">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">
-            it_smart_assistant
+            {APP_NAME}
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            My FastAPI project
+            {APP_DESCRIPTION}
           </p>
         </div>
 
@@ -19,18 +19,18 @@ export default function HomePage() {
           
           <Card>
             <CardHeader>
-              <CardTitle>Authentication</CardTitle>
+              <CardTitle>Xác thực</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="mb-4 text-muted-foreground">
-                Secure JWT-based authentication system
+                Đăng nhập an toàn để sử dụng chatbot và quản lý hội thoại
               </p>
               <div className="flex gap-2">
                 <Button asChild>
-                  <Link href={ROUTES.LOGIN}>Login</Link>
+                  <Link href={ROUTES.LOGIN}>Đăng nhập</Link>
                 </Button>
                 <Button variant="outline" asChild>
-                  <Link href={ROUTES.REGISTER}>Register</Link>
+                  <Link href={ROUTES.REGISTER}>Đăng ký</Link>
                 </Button>
               </div>
             </CardContent>
@@ -40,14 +40,14 @@ export default function HomePage() {
           
           <Card>
             <CardHeader>
-              <CardTitle>AI Assistant</CardTitle>
+              <CardTitle>Chatbot sinh viên</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="mb-4 text-muted-foreground">
-                Chat with our AI assistant powered by PydanticAI
+                Tra cứu thông tin học vụ và nhận hỗ trợ từ {APP_NAME}
               </p>
               <Button asChild>
-                <Link href={ROUTES.CHAT}>Start Chat</Link>
+                <Link href={ROUTES.CHAT}>Bắt đầu trò chuyện</Link>
               </Button>
             </CardContent>
           </Card>
@@ -55,14 +55,14 @@ export default function HomePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Dashboard</CardTitle>
+              <CardTitle>Tổng quan</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="mb-4 text-muted-foreground">
-                View your dashboard and manage your account
+                Xem trạng thái hệ thống và quản lý tài khoản của bạn
               </p>
               <Button variant="outline" asChild>
-                <Link href={ROUTES.DASHBOARD}>Go to Dashboard</Link>
+                <Link href={ROUTES.DASHBOARD}>Mở tổng quan</Link>
               </Button>
             </CardContent>
           </Card>

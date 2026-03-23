@@ -15,7 +15,7 @@ export default function ChatPage() {
       <div className="flex-1 min-w-0 flex flex-col">
         <div className="flex items-center gap-2 p-2 border-b md:hidden">
           <ChatSidebarToggle />
-          <span className="text-sm font-medium">Chat</span>
+          <span className="text-sm font-medium">Trò chuyện</span>
         </div>
         <div className="flex-1 min-h-0">
           <ChatContainer />

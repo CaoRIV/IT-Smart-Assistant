@@ -78,7 +78,11 @@ async def get_conversation(
 
     Raises 404 if the conversation does not exist.
     """
-    return await conversation_service.get_conversation(conversation_id, include_messages=True)
+    return await conversation_service.get_conversation(
+        conversation_id,
+        include_messages=True,
+        user_id=current_user.id,
+    )
 
 
 @router.patch("/{conversation_id}", response_model=ConversationRead)
@@ -92,7 +96,11 @@ async def update_conversation(
 
     Raises 404 if the conversation does not exist.
     """
-    return await conversation_service.update_conversation(conversation_id, data)
+    return await conversation_service.update_conversation(
+        conversation_id,
+        data,
+        user_id=current_user.id,
+    )
 
 
 @router.delete("/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -105,7 +113,7 @@ async def delete_conversation(
 
     Raises 404 if the conversation does not exist.
     """
-    await conversation_service.delete_conversation(conversation_id)
+    await conversation_service.delete_conversation(conversation_id, user_id=current_user.id)
 
 
 @router.post(
@@ -121,7 +129,10 @@ async def archive_conversation(
 
     Archived conversations are hidden from the default list view.
     """
-    return await conversation_service.archive_conversation(conversation_id)
+    return await conversation_service.archive_conversation(
+        conversation_id,
+        user_id=current_user.id,
+    )
 
 
 @router.get("/{conversation_id}/messages", response_model=MessageList)
@@ -136,7 +147,12 @@ async def list_messages(
 
     Returns messages ordered by creation time (oldest first).
     """
-    items, total = await conversation_service.list_messages(conversation_id, skip=skip, limit=limit)
+    items, total = await conversation_service.list_messages(
+        conversation_id,
+        skip=skip,
+        limit=limit,
+        user_id=current_user.id,
+    )
     return MessageList(items=items, total=total)
 
 
@@ -155,4 +171,8 @@ async def add_message(
 
     Raises 404 if the conversation does not exist.
     """
-    return await conversation_service.add_message(conversation_id, data)
+    return await conversation_service.add_message(
+        conversation_id,
+        data,
+        user_id=current_user.id,
+    )

@@ -15,11 +15,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof BackendApiError) {
       const detail =
-        (error.data as { detail?: string })?.detail || "Registration failed";
+        (error.data as { detail?: string })?.detail || "Đăng ký thất bại";
       return NextResponse.json({ detail }, { status: error.status });
     }
     return NextResponse.json(
-      { detail: "Internal server error" },
+      { detail: "Lỗi máy chủ nội bộ" },
       { status: 500 }
     );
   }

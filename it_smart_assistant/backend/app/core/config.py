@@ -106,18 +106,35 @@ class Settings(BaseSettings):
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
 
     # === File Storage (S3/MinIO) ===
+    STORAGE_BACKEND: Literal["filesystem", "s3"] = "filesystem"
     S3_ENDPOINT: str | None = None
     S3_ACCESS_KEY: str = ""
     S3_SECRET_KEY: str = ""
     S3_BUCKET: str = "it_smart_assistant"
     S3_REGION: str = "us-east-1"
+    S3_SECURE: bool = False
 
-    # === AI Agent (langgraph, openai) ===
-    OPENAI_API_KEY: str = ""
+    # === Retrieval / Embeddings ===
+    EMBEDDING_PROVIDER: Literal["openai", "google", "local"] = "openai"
+    EMBEDDING_MODEL: str = "text-embedding-3-small"
+    EMBEDDING_DIMENSIONS: int = 1536
+    EMBEDDING_BATCH_SIZE: int = 32
+    ENABLE_VECTOR_SEARCH: bool = True
+    VECTOR_SEARCH_CANDIDATES: int = 12
+    HYBRID_LEXICAL_WEIGHT: float = 1.0
+    HYBRID_VECTOR_WEIGHT: float = 60.0
+    ENABLE_OCR: bool = False
+
+    # === AI Agent ===
+    OPENAI_API_KEY: str | None = None
+    GOOGLE_API_KEY: str | None = None
     AI_MODEL: str = "gpt-4o-mini"
     AI_TEMPERATURE: float = 0.7
     AI_FRAMEWORK: str = "langgraph"
-    LLM_PROVIDER: str = "openai"
+    LLM_PROVIDER: Literal["openai", "google"] = "openai"
+
+    # === Worker ===
+    WORKER_HEARTBEAT_SECONDS: int = 30
 
     # === CORS ===
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8080"]
