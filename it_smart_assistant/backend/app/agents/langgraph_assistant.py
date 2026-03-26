@@ -18,11 +18,13 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 
 from app.agents.intent_router import IntentRoute, route_human_message
-from app.agents.prompts import DEFAULT_SYSTEM_PROMPT
+from app.agents.prompts import DEFAULT_SYSTEM_PROMPT, LECTURER_SYSTEM_PROMPT
 from app.agents.tools.course_catalog import search_course_catalog
 from app.agents.tools.form_generator import generate_form
 from app.agents.tools.procedure_workflow import build_procedure_workflow
 from app.agents.tools.student_knowledge import search_student_knowledge
+from app.agents.tools.lecturer_knowledge import search_lecturer_knowledge_base
+from app.agents.tools.evaluate_course_regulation import search_course_evaluation_rules
 from app.agents.tools import get_current_datetime
 from app.core.config import settings
 from app.schemas.chat_attachment import PromptAttachment
@@ -38,6 +40,7 @@ class AgentContext(TypedDict, total=False):
 
     user_id: str | None
     user_name: str | None
+    user_role: str | None
     metadata: dict[str, Any]
 
 
@@ -73,7 +76,15 @@ def current_datetime() -> str:
 
 
 # List of all available tools
-ALL_TOOLS = [current_datetime, search_student_knowledge, search_course_catalog, build_procedure_workflow, generate_form]
+ALL_TOOLS = [
+    current_datetime,
+    search_student_knowledge,
+    search_course_catalog,
+    build_procedure_workflow,
+    generate_form,
+    search_lecturer_knowledge_base,
+    search_course_evaluation_rules,
+]
 
 # Create a dictionary for quick tool lookup by name
 TOOLS_BY_NAME = {t.name: t for t in ALL_TOOLS}
@@ -111,10 +122,16 @@ class LangGraphAssistant:
         model_name: str | None = None,
         temperature: float | None = None,
         system_prompt: str | None = None,
+        user_role: str = "student",
     ):
         self.model_name = model_name or settings.AI_MODEL
         self.temperature = temperature or settings.AI_TEMPERATURE
-        self.system_prompt = system_prompt or DEFAULT_SYSTEM_PROMPT
+        if system_prompt:
+            self.system_prompt = system_prompt
+        elif user_role == "lecturer":
+            self.system_prompt = LECTURER_SYSTEM_PROMPT
+        else:
+            self.system_prompt = DEFAULT_SYSTEM_PROMPT
         self._graph = None
         self._checkpointer = MemorySaver()
 
@@ -131,7 +148,7 @@ class LangGraphAssistant:
                 temperature=self.temperature,
                 google_api_key=settings.GOOGLE_API_KEY,
             )
-        else:
+        elif provider == "openai":
             if not settings.OPENAI_API_KEY:
                 raise ValueError("OPENAI_API_KEY is required when LLM_PROVIDER=openai")
 
@@ -141,8 +158,14 @@ class LangGraphAssistant:
                 api_key=settings.OPENAI_API_KEY,
                 streaming=True,
             )
+        else:
+            raise ValueError(
+                f"Unsupported LLM_PROVIDER: {provider}. "
+                "Supported providers are 'google' and 'openai'."
+            )
 
         return model.bind_tools(ALL_TOOLS)
+
 
     @staticmethod
     def _find_last_human_message(messages: list[BaseMessage]) -> HumanMessage | None:
@@ -593,13 +616,13 @@ class LangGraphAssistant:
             yield stream_mode, data
 
 
-def get_agent() -> LangGraphAssistant:
+def get_agent(user_role: str = "student") -> LangGraphAssistant:
     """Factory function to create a LangGraphAssistant.
 
     Returns:
         Configured LangGraphAssistant instance.
     """
-    return LangGraphAssistant()
+    return LangGraphAssistant(user_role=user_role)
 
 
 async def run_agent(
@@ -621,5 +644,6 @@ async def run_agent(
     Returns:
         Tuple of (output_text, tool_events, context).
     """
-    agent = get_agent()
+    user_role = context.get("user_role", "student") if context else "student"
+    agent = get_agent(user_role=user_role)
     return await agent.run(user_input, history, context, thread_id)

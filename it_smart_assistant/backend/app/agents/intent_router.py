@@ -18,6 +18,8 @@ IntentName = Literal[
     "procedure_workflow",
     "form_fill",
     "attachment_qa",
+    "lecturer_qa",
+    "course_evaluation",
 ]
 
 
@@ -111,6 +113,35 @@ COURSE_CATALOG_KEYWORDS = {
     "ky su",
 }
 
+LECTURER_KEYWORDS = {
+    "giang vien",
+    "giao vien",
+    "can bo",
+    "co van hoc tap",
+    "lich coi thi",
+    "lich day",
+    "nghien cuu khoa hoc",
+    "nckh",
+    "de tai",
+    "bai bao",
+    "hoi thao",
+}
+
+COURSE_EVALUATION_KEYWORDS = {
+    "danh gia hoc phan",
+    "quy dinh danh gia",
+    "qd 2004",
+    "quy dinh 2004",
+    "diem thuong xuyen",
+    "diem giua ky",
+    "diem cuoi ky",
+    "thi cuoi ky",
+    "cham thi",
+    "phuc khao",
+    "danh gia diem",
+    "thang diem",
+}
+
 
 def _normalize_text(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", value or "")
@@ -177,6 +208,22 @@ def route_human_message(message: HumanMessage) -> IntentRoute:
             reason="short greeting or conversational opener",
             force_tool_calls=[],
             system_hint="Nguoi dung dang hoi chao hoac tro chuyen thong thuong. Tra loi tu nhien, khong can goi tool neu khong can thiet.",
+        )
+        
+    if _contains_any(normalized_text, COURSE_EVALUATION_KEYWORDS):
+        return IntentRoute(
+            intent="course_evaluation",
+            reason="course evaluation regulation lookup",
+            force_tool_calls=[_tool_call("search_course_evaluation_rules", {"query": raw_text, "top_k": 5})],
+            system_hint="Nguoi dung dang hoi ve quy dinh danh gia hoc phan, thi cu hoac cham diem. Tra loi chi tiet dua vao quy dinh duoc cung cap.",
+        )
+
+    if _contains_any(normalized_text, LECTURER_KEYWORDS):
+        return IntentRoute(
+            intent="lecturer_qa",
+            reason="lecturer-specific question",
+            force_tool_calls=[_tool_call("search_lecturer_knowledge_base", {"query": raw_text, "top_k": 4})],
+            system_hint="Nguoi dung la giang vien va dang hoi thong tin lien quan den cong viec. Uu tien su dung knowledge base cua giang vien.",
         )
 
     if _contains_any(normalized_text, COURSE_CATALOG_KEYWORDS) or _looks_like_course_code(normalized_text):
