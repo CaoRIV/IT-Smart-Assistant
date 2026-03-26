@@ -14,8 +14,10 @@ from app.knowledge import get_student_knowledge_base
 COURSE_CODE_PATTERN = re.compile(r"\b[A-Z]{2,}[A-Z0-9]*\d[\dA-Z.]*\b")
 
 
-def _normalize_text(value: str) -> str:
-    normalized = unicodedata.normalize("NFKD", value or "")
+def _normalize_text(value: str | None) -> str:
+    if not isinstance(value, str):
+        value = ""
+    normalized = unicodedata.normalize("NFKD", value)
     ascii_value = normalized.encode("ascii", "ignore").decode("ascii")
     return re.sub(r"\s+", " ", ascii_value.lower()).strip()
 

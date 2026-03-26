@@ -94,16 +94,22 @@ class RetrievalProfile:
     default_track: str | None = None
 
 
-def _strip_accents(text: str) -> str:
+def _strip_accents(text: str | None) -> str:
+    if not text:
+        return ""
     normalized = unicodedata.normalize("NFD", text)
     return "".join(char for char in normalized if unicodedata.category(char) != "Mn")
 
 
-def _normalize_text(text: str) -> str:
+def _normalize_text(text: str | None) -> str:
+    if not text:
+        return ""
     return _strip_accents(text).lower().strip()
 
 
-def _tokenize(text: str) -> list[str]:
+def _tokenize(text: str | None) -> list[str]:
+    if not text:
+        return []
     return [
         token
         for token in TOKEN_PATTERN.findall(_normalize_text(text))
@@ -111,7 +117,9 @@ def _tokenize(text: str) -> list[str]:
     ]
 
 
-def _contains_phrase(text: str, phrases: tuple[str, ...]) -> bool:
+def _contains_phrase(text: str | None, phrases: tuple[str, ...]) -> bool:
+    if not text:
+        return False
     return any(phrase in text for phrase in phrases)
 
 
@@ -137,12 +145,12 @@ class StudentKnowledgeBase:
             raw = json.loads(path.read_text(encoding="utf-8"))
             documents.append(
                 KnowledgeDocument(
-                    id=raw["id"],
-                    title=raw["title"],
-                    category=raw["category"],
-                    summary=raw["summary"],
-                    content=raw["content"],
-                    source_url=raw["source_url"],
+                    id=raw.get("id", ""),
+                    title=raw.get("title", ""),
+                    category=raw.get("category", ""),
+                    summary=raw.get("summary", ""),
+                    content=raw.get("content", ""),
+                    source_url=raw.get("source_url", ""),
                     keywords=raw.get("keywords", []),
                 )
             )
@@ -153,11 +161,11 @@ class StudentKnowledgeBase:
                 for chunk in raw.get("chunks", []):
                     documents.append(
                         KnowledgeDocument(
-                            id=chunk["chunk_id"],
-                            title=raw["title"],
-                            category=raw["category"],
-                            summary=chunk["summary"],
-                            content=chunk["content"],
+                            id=chunk.get("chunk_id", ""),
+                            title=raw.get("title", ""),
+                            category=raw.get("category", ""),
+                            summary=chunk.get("summary", ""),
+                            content=chunk.get("content", ""),
                             source_url=raw.get("source_url", ""),
                             keywords=chunk.get("keywords", raw.get("keywords", [])),
                             source_kind="chunk",
@@ -179,22 +187,22 @@ class StudentKnowledgeBase:
                         amount_value = row.get("amount_value")
                         amount_value_text = f" ({amount_value} dong)" if amount_value else ""
                         content = (
-                            f"{table['title']}. {row['label']}. "
+                            f"{table.get('title', '')}. {row.get('label', '')}. "
                             f"Muc hoc phi: {amount_text}{amount_value_text}."
                         )
                         documents.append(
                             KnowledgeDocument(
-                                id=f"{table['table_id']}-{row['row_id']}",
-                                title=raw["title"],
-                                category=raw["category"],
+                                id=f"{table.get('table_id', '')}-{row.get('row_id', '')}",
+                                title=raw.get("title", ""),
+                                category=raw.get("category", ""),
                                 summary=content,
                                 content=row.get("search_text") or content,
                                 source_url=raw.get("source_url", ""),
                                 keywords=[
-                                    raw["category"],
-                                    raw["title"],
-                                    table["title"],
-                                    row["label"],
+                                    raw.get("category", ""),
+                                    raw.get("title", ""),
+                                    table.get("title", ""),
+                                    row.get("label", ""),
                                     amount_text,
                                     *row.get("track_tags", []),
                                     *row.get("basis_tags", []),
@@ -220,11 +228,11 @@ class StudentKnowledgeBase:
                 raw = json.loads(path.read_text(encoding="utf-8"))
                 documents.append(
                     KnowledgeDocument(
-                        id=raw["id"],
-                        title=raw["title"],
-                        category=raw["category"],
-                        summary=raw["question"],
-                        content=f"Cau hoi: {raw['question']}\n\nTra loi: {raw['answer']}",
+                        id=raw.get("id", ""),
+                        title=raw.get("title", ""),
+                        category=raw.get("category", ""),
+                        summary=raw.get("question", ""),
+                        content=f"Cau hoi: {raw.get('question', '')}\n\nTra loi: {raw.get('answer', '')}",
                         source_url=raw.get("source_url", ""),
                         keywords=raw.get("keywords", []),
                         source_kind="faq",
@@ -235,18 +243,18 @@ class StudentKnowledgeBase:
             for path in sorted(admin_forms_dir.glob("*.json")):
                 raw = json.loads(path.read_text(encoding="utf-8"))
                 field_descriptions = [
-                    f"{field['label']} ({field['name']}, {field.get('type', 'text')})"
+                    f"{field.get('label', '')} ({field.get('name', '')}, {field.get('type', 'text')})"
                     for field in raw.get("fields", [])
                 ]
                 documents.append(
                     KnowledgeDocument(
-                        id=raw["id"],
-                        title=raw["title"],
-                        category=raw["category"],
-                        summary=raw["description"],
+                        id=raw.get("id", ""),
+                        title=raw.get("title", ""),
+                        category=raw.get("category", ""),
+                        summary=raw.get("description", ""),
                         content=(
-                            f"Bieu mau: {raw['title']}\n\n"
-                            f"Mo ta: {raw['description']}\n\n"
+                            f"Bieu mau: {raw.get('title', '')}\n\n"
+                            f"Mo ta: {raw.get('description', '')}\n\n"
                             f"Cac truong: {', '.join(field_descriptions) if field_descriptions else 'Khong co'}"
                         ),
                         source_url=raw.get("source_url", ""),
@@ -302,13 +310,13 @@ class StudentKnowledgeBase:
                             id=row["external_id"],
                             source_document_id=row["source_document_id"],
                             source_kind=row["source_kind"],
-                            title=row["title"],
-                            category=row["category"],
-                            summary=row["summary"],
-                            content=row["content"],
+                            title=row["title"] or "",
+                            category=row["category"] or "",
+                            summary=row["summary"] or "",
+                            content=row["content"] or "",
                             source_url=row["source_url"] or "",
-                            source_path=row["source_path"],
-                            section_title=row["section_title"],
+                            source_path=row["source_path"] or "",
+                            section_title=row["section_title"] or "",
                             page_from=row["page_from"],
                             page_to=row["page_to"],
                             keywords=row["keywords"] or [],
@@ -335,7 +343,7 @@ class StudentKnowledgeBase:
         category_text = _normalize_text(document.category)
         summary_text = _normalize_text(document.summary)
         content_text = _normalize_text(document.content)
-        keyword_text = " ".join(_normalize_text(keyword) for keyword in document.keywords)
+        keyword_text = " ".join(_normalize_text(keyword) for keyword in document.keywords if keyword)
 
         score = 0
 
@@ -351,7 +359,7 @@ class StudentKnowledgeBase:
         title_token_list = _tokenize(document.title)
         category_token_list = _tokenize(document.category)
         summary_token_list = _tokenize(document.summary)
-        keyword_token_list = _tokenize(" ".join(document.keywords))
+        keyword_token_list = _tokenize(" ".join(k for k in document.keywords if k))
         content_token_list = _tokenize(document.content)
 
         title_tokens = set(title_token_list)
@@ -450,7 +458,7 @@ class StudentKnowledgeBase:
                         document.summary,
                         document.content,
                         document.section_title,
-                        " ".join(document.keywords),
+                        " ".join(k for k in document.keywords if k),
                     ],
                 )
             )
@@ -485,7 +493,7 @@ class StudentKnowledgeBase:
                         document.summary,
                         document.content,
                         document.section_title,
-                        " ".join(document.keywords),
+                        " ".join(k for k in document.keywords if k),
                     ],
                 )
             )
@@ -605,6 +613,9 @@ class StudentKnowledgeBase:
         return 0
 
     def _build_excerpt(self, query_tokens: set[str], document: KnowledgeDocument) -> str:
+        if not document.content:
+            return document.summary or ""
+        
         sentences = [sentence.strip() for sentence in re.split(r"(?<=[.!?])\s+", document.content) if sentence.strip()]
 
         for sentence in sentences:
@@ -612,7 +623,7 @@ class StudentKnowledgeBase:
             if any(token in normalized for token in query_tokens):
                 return sentence
 
-        return document.summary
+        return document.summary or ""
 
     def _semantic_scores(self, query: str, *, candidate_limit: int) -> dict[str, float]:
         """Fetch semantic similarity scores from PostgreSQL pgvector when available."""
