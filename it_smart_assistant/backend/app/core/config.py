@@ -10,6 +10,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 def find_env_file() -> Path | None:
     """Find .env file in current or parent directories."""
+    # Priority 1: Check in backend directory (standard project structure)
+    backend_env = Path(__file__).parent.parent.parent / ".env"
+    if backend_env.exists():
+        return backend_env
+
+    # Priority 2: Check current and parent directories
     current = Path.cwd()
     for path in [current, current.parent]:
         env_file = path / ".env"
@@ -40,7 +46,7 @@ class Settings(BaseSettings):
 
     # === Database (PostgreSQL async) ===
     POSTGRES_HOST: str = "localhost"
-    POSTGRES_PORT: int = 5432
+    POSTGRES_PORT: int = 5433
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = "it_smart_assistant"
@@ -115,9 +121,9 @@ class Settings(BaseSettings):
     S3_SECURE: bool = False
 
     # === Retrieval / Embeddings ===
-    EMBEDDING_PROVIDER: Literal["openai", "google", "local"] = "openai"
-    EMBEDDING_MODEL: str = "text-embedding-3-small"
-    EMBEDDING_DIMENSIONS: int = 1536
+    EMBEDDING_PROVIDER: Literal["openai", "google", "local"] = "google"
+    EMBEDDING_MODEL: str = "models/gemini-embedding-2-preview"
+    EMBEDDING_DIMENSIONS: int = 768
     EMBEDDING_BATCH_SIZE: int = 32
     ENABLE_VECTOR_SEARCH: bool = True
     VECTOR_SEARCH_CANDIDATES: int = 12
@@ -127,7 +133,7 @@ class Settings(BaseSettings):
 
     # === AI Agent ===
     OPENAI_API_KEY: str | None = None
-    GOOGLE_API_KEY: str | None = None
+    GOOGLE_API_KEY: str = "AIzaSyBPriQbZ_vyZjRZhM8OG31kagRB7TCUalg"
     AI_MODEL: str = "gpt-4o-mini"
     AI_TEMPERATURE: float = 0.7
     AI_FRAMEWORK: str = "langgraph"

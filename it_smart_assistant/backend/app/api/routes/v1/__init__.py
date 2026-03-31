@@ -4,7 +4,7 @@
 from fastapi import APIRouter
 
 from app.api.routes.v1 import health
-from app.api.routes.v1 import analytics, auth, chat_attachments, feedback, form_exports, knowledge_admin, users
+from app.api.routes.v1 import analytics, auth, bai_giang, chat_attachments, feedback, form_exports, knowledge_admin, users
 from app.api.routes.v1 import sessions
 from app.api.routes.v1 import items
 from app.api.routes.v1 import conversations
@@ -51,3 +51,6 @@ v1_router.include_router(ws.router, tags=["websocket"])
 
 # AI Agent routes
 v1_router.include_router(agent.router, tags=["agent"])
+
+# Bai giang (lecture) routes
+v1_router.include_router(bai_giang.router, prefix="/bai-giang", tags=["bai-giang"])

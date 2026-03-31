@@ -17,7 +17,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 
-from app.agents.intent_router import IntentRoute, route_human_message
+from app.agents.intent_router import IntentRoute, route_human_message, route_human_message_async
 from app.agents.prompts import DEFAULT_SYSTEM_PROMPT, LECTURER_SYSTEM_PROMPT
 from app.agents.tools.course_catalog import search_course_catalog
 from app.agents.tools.form_generator import generate_form
@@ -25,9 +25,16 @@ from app.agents.tools.procedure_workflow import build_procedure_workflow
 from app.agents.tools.student_knowledge import search_student_knowledge
 from app.agents.tools.lecturer_knowledge import search_lecturer_knowledge_base
 from app.agents.tools.evaluate_course_regulation import search_course_evaluation_rules
+from app.agents.tools.lecture_knowledge import search_lecture_knowledge
+from app.agents.tools.search_lecture_tool import search_lecture
+from app.agents.tools.solve_exercise_tool import solve_with_style
 from app.agents.tools import get_current_datetime
 from app.core.config import settings
 from app.schemas.chat_attachment import PromptAttachment
+
+from app.agents.guardrails import check_image_quality
+from app.services.conversation_state import ConversationStateManager, get_state_manager
+from app.services.rate_limiter import get_rate_limiter
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +49,8 @@ class AgentContext(TypedDict, total=False):
     user_name: str | None
     user_role: str | None
     metadata: dict[str, Any]
+    conversation_id: str | None
+    bypass_image_check: bool  # Allow bypass for testing
 
 
 class AgentAttachment(TypedDict):
@@ -84,6 +93,9 @@ ALL_TOOLS = [
     generate_form,
     search_lecturer_knowledge_base,
     search_course_evaluation_rules,
+    search_lecture_knowledge,
+    search_lecture,
+    solve_with_style,
 ]
 
 # Create a dictionary for quick tool lookup by name
@@ -99,6 +111,11 @@ def _serialize_tool_result(result: Any) -> str:
         return json.dumps(result, ensure_ascii=False, default=str)
     except TypeError:
         return str(result)
+
+
+class RateLimitExceeded(Exception):
+    """Exception raised when rate limit is exceeded."""
+    pass
 
 
 class LangGraphAssistant:
@@ -166,9 +183,23 @@ class LangGraphAssistant:
 
         return model.bind_tools(ALL_TOOLS)
 
+    async def _create_model_with_rate_limit(self, user_id: str | None = None):
+        """Create model with rate limit check."""
+        if user_id:
+            limiter = await get_rate_limiter()
+            allowed, info = await limiter.check_rate_limit(user_id)
+            if not allowed:
+                retry_after = info.get("retry_after_seconds", 60)
+                raise RateLimitExceeded(
+                    f"Rate limit exceeded. Please try again in {retry_after} seconds."
+                )
+            # Record the request
+            await limiter.record_request(user_id)
+        return self._create_model()
 
     @staticmethod
     def _find_last_human_message(messages: list[BaseMessage]) -> HumanMessage | None:
+        """Find the last human message in the conversation."""
         for message in reversed(messages):
             if isinstance(message, HumanMessage):
                 return message
@@ -221,7 +252,7 @@ class LangGraphAssistant:
                 reason="fallback from empty course catalog retrieval",
                 force_tool_calls=[
                     {
-                        "id": f"router_fallback_{uuid4().hex}",
+                        "id": f"router_fallback_{uuid.uuid4().hex}",
                         "name": "search_student_knowledge",
                         "args": {"query": last_human_text, "top_k": 4},
                         "type": "tool_call",
@@ -240,7 +271,7 @@ class LangGraphAssistant:
                 reason="fallback from unmatched procedure workflow",
                 force_tool_calls=[
                     {
-                        "id": f"router_fallback_{uuid4().hex}",
+                        "id": f"router_fallback_{uuid.uuid4().hex}",
                         "name": "search_student_knowledge",
                         "args": {"query": last_human_text, "top_k": 4},
                         "type": "tool_call",
@@ -261,7 +292,7 @@ class LangGraphAssistant:
                     reason="fallback from empty tuition retrieval",
                     force_tool_calls=[
                         {
-                            "id": f"router_fallback_{uuid4().hex}",
+                            "id": f"router_fallback_{uuid.uuid4().hex}",
                             "name": "build_procedure_workflow",
                             "args": {"request": last_human_text},
                             "type": "tool_call",
@@ -296,11 +327,12 @@ class LangGraphAssistant:
     ) -> IntentRoute:
         return route_human_message(self._build_user_message(user_input, attachments))
 
-    def _agent_node(self, state: AgentState) -> dict[str, list[BaseMessage]]:
+    async def _agent_node(self, state: AgentState, agent_context: AgentContext | None = None) -> dict[str, list[BaseMessage]]:
         """Agent node that processes messages and decides whether to call tools.
 
         This is the main reasoning node in the ReAct pattern.
         """
+        agent_context = agent_context or {}
         fallback_route = self._fallback_after_tool(state)
         if fallback_route and fallback_route.force_tool_calls:
             logger.info(
@@ -318,7 +350,7 @@ class LangGraphAssistant:
             }
 
         if state["messages"] and isinstance(state["messages"][-1], HumanMessage):
-            route = route_human_message(state["messages"][-1])
+            route = await route_human_message_async(state["messages"][-1])
             if route.force_tool_calls:
                 logger.info("Intent router forced tool call(s): %s (%s)", route.intent, route.reason)
                 return {
@@ -330,13 +362,13 @@ class LangGraphAssistant:
                     ]
                 }
 
-        model = self._create_model()
+        model = await self._create_model_with_rate_limit(agent_context.get("user_id"))
 
         # Prepend system message to the conversation
         system_prompt = self.system_prompt
         route_hint: IntentRoute | None = None
         if state["messages"] and isinstance(state["messages"][-1], HumanMessage):
-            route_hint = route_human_message(state["messages"][-1])
+            route_hint = await route_human_message_async(state["messages"][-1])
         elif fallback_route:
             route_hint = fallback_route
         if route_hint and route_hint.system_hint:
@@ -469,6 +501,7 @@ class LangGraphAssistant:
     def _build_user_message(
         user_input: str,
         attachments: list[PromptAttachment] | None = None,
+        skip_image_check: bool = False,
     ) -> HumanMessage:
         """Build the current user message, enriching it with attachment context."""
         if not attachments:
@@ -476,9 +509,16 @@ class LangGraphAssistant:
 
         document_sections: list[str] = []
         image_attachments: list[PromptAttachment] = []
+        failed_image_checks: list[str] = []
 
         for attachment in attachments:
             if attachment.kind == "image" and attachment.data_url:
+                # Check image quality if not skipped
+                if not skip_image_check:
+                    quality_result = check_image_quality(attachment.data_url)
+                    if not quality_result.is_acceptable:
+                        failed_image_checks.append(quality_result.suggestion or "Ảnh không đạt yêu cầu")
+                        continue  # Skip this image
                 image_attachments.append(attachment)
                 continue
 
@@ -490,6 +530,11 @@ class LangGraphAssistant:
                 document_sections.append(
                     f"Tep dinh kem: {attachment.file_name}\nKhong trich xuat duoc noi dung van ban."
                 )
+
+        # If any images failed quality check, return warning message
+        if failed_image_checks:
+            error_msg = "\n\n".join(failed_image_checks)
+            return HumanMessage(content=f"[LỖI ẢNH] {error_msg}")
 
         if not image_attachments:
             prompt_parts = [user_input]
@@ -526,6 +571,7 @@ class LangGraphAssistant:
         context: AgentContext | None = None,
         thread_id: str = "default",
         attachments: list[PromptAttachment] | None = None,
+        conversation_id: str | None = None,
     ) -> tuple[str, list[Any], AgentContext]:
         """Run agent and return the output along with tool call events.
 
@@ -534,14 +580,42 @@ class LangGraphAssistant:
             history: Conversation history as list of {"role": "...", "content": "..."}.
             context: Optional runtime context with user info.
             thread_id: Thread ID for conversation continuity.
+            conversation_id: Optional conversation ID for Redis state management.
 
         Returns:
             Tuple of (output_text, tool_events, context).
         """
-        messages = self._convert_history(history)
-        messages.append(self._build_user_message(user_input, attachments))
-
         agent_context: AgentContext = context if context is not None else {}
+        if conversation_id:
+            agent_context["conversation_id"] = conversation_id
+
+        # Load state from Redis if conversation_id provided
+        if conversation_id:
+            try:
+                state_mgr = await get_state_manager()
+                state = await state_mgr.get_full_state(conversation_id)
+
+                # Restore subject if available
+                if state.get("subject") and not agent_context.get("subject"):
+                    agent_context["subject"] = state["subject"]
+
+                # Restore extracted text for "giải lại" scenarios
+                if state.get("extracted_text") and not attachments:
+                    # User might be asking about previous image
+                    user_input = f"[Nội dung ảnh trước đó: {state['extracted_text']}]\n\n{user_input}"
+            except Exception as e:
+                logger.warning(f"Failed to load conversation state: {e}")
+
+        # Check image quality
+        skip_image_check = agent_context.get("bypass_image_check", False)
+        messages = self._convert_history(history)
+        user_message = self._build_user_message(user_input, attachments, skip_image_check)
+
+        # Handle image quality error
+        if user_message.content and isinstance(user_message.content, str) and user_message.content.startswith("[LỖI ẢNH]"):
+            return user_message.content.replace("[LỖI ẢNH] ", ""), [], agent_context
+
+        messages.append(user_message)
 
         logger.info(f"Running agent with user input: {user_input[:100]}...")
 
@@ -569,9 +643,45 @@ class LangGraphAssistant:
                 if hasattr(message, "tool_calls") and message.tool_calls:
                     tool_events.extend(message.tool_calls)
 
+        # Save state to Redis if conversation_id provided
+        if conversation_id and output:
+            try:
+                state_mgr = await get_state_manager()
+                await state_mgr.save_history(conversation_id, history_for_redis)
+
+                # Save subject if detected in route
+                if route and hasattr(route, 'intent'):
+                    if route.intent in ['exercise_solving', 'lecture_qa']:
+                        # Extract subject from output or input
+                        subject = self._extract_subject(output, user_input)
+                        if subject:
+                            await state_mgr.save_subject(conversation_id, subject)
+
+                # Save extracted text from attachments
+                if attachments:
+                    for att in attachments:
+                        if att.extracted_text:
+                            await state_mgr.save_extracted_text(
+                                conversation_id,
+                                att.extracted_text,
+                                att.id
+                            )
+            except Exception as e:
+                logger.warning(f"Failed to save conversation state: {e}")
+
         logger.info(f"Agent run complete. Output length: {len(output)} chars")
 
         return output, tool_events, agent_context
+
+    def _extract_subject(self, output: str, user_input: str) -> str | None:
+        """Extract subject from output or input."""
+        # Simple heuristic - can be improved
+        subjects = ['toán', 'lý', 'hóa', 'lập trình', 'cơ sở dữ liệu', 'mạng máy tính']
+        text = (user_input + ' ' + output).lower()
+        for subj in subjects:
+            if subj in text:
+                return subj
+        return None
 
     async def stream(
         self,

@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Literal
 from uuid import uuid4
 
 from langchain_core.messages import HumanMessage
+
+from app.knowledge.bai_giang_schema import SubjectType
 
 IntentName = Literal[
     "casual",
@@ -20,6 +22,8 @@ IntentName = Literal[
     "attachment_qa",
     "lecturer_qa",
     "course_evaluation",
+    "lecture_qa",
+    "exercise_solving",
 ]
 
 
@@ -31,6 +35,7 @@ class IntentRoute:
     reason: str
     force_tool_calls: list[dict[str, Any]]
     system_hint: str | None = None
+    subject: SubjectType = field(default=SubjectType.KHAC)
 
 
 GREETING_PHRASES = {
@@ -142,6 +147,47 @@ COURSE_EVALUATION_KEYWORDS = {
     "thang diem",
 }
 
+LECTURE_CONTENT_KEYWORDS = {
+    "bai giang",
+    "tai lieu mon",
+    "giai bai tap",
+    "huong dan giai",
+    "vi du",
+    "cach lam",
+    "bai tap ve nha",
+    "on thi",
+    "noi dung mon",
+}
+
+EXERCISE_KEYWORDS = {
+    "giai bai",
+    "tinh toan",
+    "tinh",
+    "chung minh",
+    "tim",
+    "xac dinh",
+    "viet code",
+    "lap trinh",
+    "thuat toan",
+    "cong thuc",
+    "dao ham",
+    "tich phan",
+    "ma tran",
+    "vector",
+    "phuong trinh",
+    "bat phuong trinh",
+    "he phuong trinh",
+    "cau hoi",
+    "bai tap",
+    "bai toan",
+    "problem",
+    "exercise",
+    "calculate",
+    "solve",
+    "proof",
+    "code",
+}
+
 
 def _normalize_text(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", value or "")
@@ -218,6 +264,24 @@ def route_human_message(message: HumanMessage) -> IntentRoute:
             system_hint="Nguoi dung dang hoi ve quy dinh danh gia hoc phan, thi cu hoac cham diem. Tra loi chi tiet dua vao quy dinh duoc cung cap.",
         )
 
+    if _contains_any(normalized_text, LECTURE_CONTENT_KEYWORDS):
+        return IntentRoute(
+            intent="lecture_qa",
+            reason="lecture content or exercise solving request",
+            force_tool_calls=[_tool_call("search_lecture_knowledge", {"query": raw_text, "top_k": 4})],
+            system_hint="Nguoi dung dang hoi ve noi dung bai giang hoac nho giai bai tap. Can tim trong tai lieu bai giang de tra loi dung phong cach va phuong phap cua mon hoc.",
+        )
+
+    if _contains_any(normalized_text, EXERCISE_KEYWORDS):
+        return IntentRoute(
+            intent="exercise_solving",
+            reason="explicit exercise solving request",
+            force_tool_calls=[
+                _tool_call("search_lecture", {"query": raw_text, "top_k": 4}),
+            ],
+            system_hint="Nguoi dung dang yeu cau giai bai tap. Tim kiem tai lieu bai giang phu hop, sau do su dung tool solve_with_style de giai bai theo dung phong cach giang day.",
+        )
+
     if _contains_any(normalized_text, LECTURER_KEYWORDS):
         return IntentRoute(
             intent="lecturer_qa",
@@ -290,4 +354,71 @@ def route_human_message(message: HumanMessage) -> IntentRoute:
         reason="fallback conversational route",
         force_tool_calls=[],
         system_hint=None,
+    )
+
+
+# Import classifier for async routing
+from app.agents.subject_classifier import classify_subject
+
+
+async def route_human_message_async(
+    message: HumanMessage,
+    conversation_history: list[dict] | None = None,
+    conversation_id: str | None = None,
+) -> IntentRoute:
+    """Route user message with Gemini subject classification.
+    
+    This is the enhanced version that uses Gemini to accurately classify
+    the academic subject before routing.
+    
+    Args:
+        message: User message
+        conversation_history: Optional conversation history for context
+        conversation_id: Optional conversation ID for Redis state lookup
+        
+    Returns:
+        IntentRoute with accurate subject classification
+    """
+    # First get the basic route
+    route = route_human_message(message)
+    
+    # Extract text for classification
+    raw_text = _extract_human_text(message)
+    
+    # Only classify subject for academic intents
+    academic_intents = {"lecture_qa", "exercise_solving", "knowledge_qa", "attachment_qa"}
+    
+    if route.intent in academic_intents:
+        # Use Gemini to classify subject
+        subject = await classify_subject(raw_text, conversation_history)
+        
+        # Update tool calls with subject parameter
+        updated_tool_calls = []
+        for tool_call in route.force_tool_calls:
+            # Add subject to tool call args if it's a lecture-related tool
+            if tool_call.get("name") in ["search_lecture", "search_lecture_knowledge", "solve_with_style"]:
+                tool_args = tool_call.get("args", {}).copy()
+                tool_args["subject"] = subject.value
+                updated_tool_call = tool_call.copy()
+                updated_tool_call["args"] = tool_args
+                updated_tool_calls.append(updated_tool_call)
+            else:
+                updated_tool_calls.append(tool_call)
+        
+        # Create new route with subject
+        return IntentRoute(
+            intent=route.intent,
+            reason=f"{route.reason} | Subject: {subject.value} (via Gemini)",
+            force_tool_calls=updated_tool_calls,
+            system_hint=f"{route.system_hint or ''}\nMôn học được phân loại: {subject.value}.",
+            subject=subject,
+        )
+    
+    # For non-academic intents, keep original route but add default subject
+    return IntentRoute(
+        intent=route.intent,
+        reason=route.reason,
+        force_tool_calls=route.force_tool_calls,
+        system_hint=route.system_hint,
+        subject=SubjectType.KHAC,
     )
