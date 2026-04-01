@@ -1,6 +1,7 @@
 import logging
-from typing import Annotated, Any, Literal, TypedDict
-from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage
+from typing import Annotated, Literal, TypedDict
+from pydantic import SecretStr
+from langchain_core.messages import BaseMessage, SystemMessage, AIMessage
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
@@ -34,7 +35,7 @@ class ManagementSupervisor:
         self.model = ChatOpenAI(
             model=settings.AI_MODEL,
             temperature=0.2, # Để temperature thấp cho tính chính xác
-            api_key=settings.OPENAI_API_KEY,
+            api_key=SecretStr(settings.OPENAI_API_KEY) if settings.OPENAI_API_KEY else None,
             streaming=True
         )
         self.model_with_tools = self.model.bind_tools(MANAGEMENT_TOOLS)
@@ -54,7 +55,7 @@ class ManagementSupervisor:
         # Dictionary mapping tool names to functions
         tool_map = {t.name: t for t in MANAGEMENT_TOOLS}
         
-        if hasattr(last_message, "tool_calls"):
+        if isinstance(last_message, AIMessage) and last_message.tool_calls:
             for call in last_message.tool_calls:
                 tool_name = call["name"]
                 tool_args = call["args"]
@@ -70,7 +71,7 @@ class ManagementSupervisor:
 
     def _should_continue(self, state: AgentState) -> Literal["tools", "__end__"]:
         last_message = state["messages"][-1]
-        if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+        if isinstance(last_message, AIMessage) and last_message.tool_calls:
             return "tools"
         return "__end__"
 
