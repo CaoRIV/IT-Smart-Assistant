@@ -113,6 +113,7 @@ async def agent_websocket(
         context = {
             "user_id": str(current_user.id),
             "user_name": current_user.full_name or current_user.email,
+            "user_role": current_user.role # Lấy role từ DB (vd: "admin" / "management")
         }
 
     try:

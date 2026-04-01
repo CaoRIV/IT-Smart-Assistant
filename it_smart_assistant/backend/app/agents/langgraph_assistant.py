@@ -31,6 +31,7 @@ from app.agents.tools.solve_exercise_tool import solve_with_style
 from app.agents.tools import get_current_datetime
 from app.core.config import settings
 from app.schemas.chat_attachment import PromptAttachment
+from app.agents.management_supervisor import get_management_agent
 
 from app.agents.guardrails import check_image_quality
 from app.services.conversation_state import ConversationStateManager, get_state_manager
@@ -727,11 +728,10 @@ class LangGraphAssistant:
 
 
 def get_agent(user_role: str = "student") -> LangGraphAssistant:
-    """Factory function to create a LangGraphAssistant.
-
-    Returns:
-        Configured LangGraphAssistant instance.
-    """
+    """Factory function to create a LangGraphAssistant or ManagementSupervisor."""
+    if user_role == "admin" or user_role == "management":
+        return get_management_agent()
+    # Default trả về agent sinh viên/giảng viên thông thường
     return LangGraphAssistant(user_role=user_role)
 
 
